@@ -1,0 +1,6 @@
+{
+  "name": "MistyGlass - 起雾玻璃水滴擦画",
+  "description": "模拟在起雾玻璃上写字与水滴擦画效果，支持自定义图片背景、笔触粗细与线条圆滑平滑处理、背景虚化与水雾水滴流淌交互体验。",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
