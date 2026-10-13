@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { BACKGROUND_PRESETS } from '../data/presets';
 import { WINDOW_MODES } from '../data/windowModes';
 import { WindowMode, Language } from '../types';
@@ -13,8 +13,33 @@ import {
   Maximize2, 
   Layers, 
   ImageIcon, 
-  ArrowRight 
+  ArrowRight,
+  Trash2,
+  Images
 } from 'lucide-react';
+
+export interface GalleryPhoto {
+  id: string;
+  url: string;
+  name: string;
+  timestamp: number;
+}
+
+const GALLERY_STORAGE_KEY = 'mist_canvas_custom_gallery';
+const DELETE_REMEMBER_KEY = 'mist_canvas_gallery_delete_remember';
+
+const loadSavedPhotos = (): GalleryPhoto[] => {
+  try {
+    const raw = localStorage.getItem(GALLERY_STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) return parsed;
+    }
+  } catch (e) {
+    console.warn('Failed to load saved gallery photos:', e);
+  }
+  return [];
+};
 
 interface BackgroundPickerProps {
   isOpen: boolean;
@@ -37,15 +62,80 @@ export const BackgroundPicker: React.FC<BackgroundPickerProps> = ({
   onSelectWindowMode,
   language = 'en',
 }) => {
-  const [activeTab, setActiveTab] = useState<'mode' | 'background'>('mode');
+  const [activeTab, setActiveTab] = useState<'mode' | 'background'>('background');
+  const [customPhotos, setCustomPhotos] = useState<GalleryPhoto[]>([]);
+  const [isDragging, setIsDragging] = useState(false);
+  const [photoToDelete, setPhotoToDelete] = useState<GalleryPhoto | null>(null);
+  const [rememberChoice, setRememberChoice] = useState(false);
+  const [dontAskAgain, setDontAskAgain] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Load custom gallery photos & preferences from localStorage on mount
+  useEffect(() => {
+    setCustomPhotos(loadSavedPhotos());
+    const remembered = localStorage.getItem(DELETE_REMEMBER_KEY) === 'true';
+    setDontAskAgain(remembered);
+  }, []);
 
   if (!isOpen) return null;
 
   const isZh = language === 'zh';
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+  const saveGalleryToStorage = (photos: GalleryPhoto[]) => {
+    try {
+      localStorage.setItem(GALLERY_STORAGE_KEY, JSON.stringify(photos));
+    } catch (e) {
+      console.warn('LocalStorage quota reached, trimming gallery:', e);
+      try {
+        // Fallback: keep most recent 6 photos
+        const trimmed = photos.slice(0, 6);
+        localStorage.setItem(GALLERY_STORAGE_KEY, JSON.stringify(trimmed));
+      } catch (err) {
+        console.error('Unable to persist gallery to storage:', err);
+      }
+    }
+  };
+
+  const compressImageForStorage = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const maxWidth = 1920;
+          const maxHeight = 1080;
+          let width = img.width;
+          let height = img.height;
+
+          if (width > maxWidth || height > maxHeight) {
+            const ratio = Math.min(maxWidth / width, maxHeight / height);
+            width = Math.round(width * ratio);
+            height = Math.round(height * ratio);
+          }
+
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            resolve(e.target?.result as string);
+            return;
+          }
+          ctx.drawImage(img, 0, 0, width, height);
+          const format = file.type === 'image/png' ? 'image/png' : 'image/jpeg';
+          const dataUrl = canvas.toDataURL(format, 0.88);
+          resolve(dataUrl);
+        };
+        img.onerror = () => resolve(e.target?.result as string);
+        img.src = e.target?.result as string;
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleProcessFiles = async (files: FileList | File[]) => {
+    const file = files[0];
     if (!file) return;
 
     if (!file.type.startsWith('image/')) {
@@ -53,15 +143,68 @@ export const BackgroundPicker: React.FC<BackgroundPickerProps> = ({
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const result = event.target?.result as string;
-      if (result) {
-        onCustomImageUpload(result);
-        onClose();
+    try {
+      const dataUrl = await compressImageForStorage(file);
+      const newPhoto: GalleryPhoto = {
+        id: `photo_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+        url: dataUrl,
+        name: file.name ? file.name.replace(/\.[^/.]+$/, '') : (isZh ? `自选相片 ${customPhotos.length + 1}` : `Photo ${customPhotos.length + 1}`),
+        timestamp: Date.now(),
+      };
+
+      const updated = [newPhoto, ...customPhotos];
+      setCustomPhotos(updated);
+      saveGalleryToStorage(updated);
+
+      // Apply as current background
+      onCustomImageUpload(dataUrl);
+    } catch (err) {
+      console.error('Failed to process image:', err);
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      handleProcessFiles(e.target.files);
+      // Reset input value so same file can be uploaded again if needed
+      e.target.value = '';
+    }
+  };
+
+  const handleRequestDeletePhoto = (photo: GalleryPhoto) => {
+    const remembered = localStorage.getItem(DELETE_REMEMBER_KEY) === 'true';
+    if (remembered || dontAskAgain) {
+      executeDelete(photo);
+    } else {
+      setPhotoToDelete(photo);
+      setRememberChoice(false);
+    }
+  };
+
+  const executeDelete = (photo: GalleryPhoto) => {
+    const updated = customPhotos.filter((p) => p.id !== photo.id);
+    setCustomPhotos(updated);
+    saveGalleryToStorage(updated);
+
+    // If currently selected background is deleted, fallback to default preset
+    if (currentBgUrl === photo.url) {
+      const fallbackUrl = BACKGROUND_PRESETS.find((p) => p.id === 'rainy-city')?.url || BACKGROUND_PRESETS[1].url;
+      onSelectPreset(fallbackUrl);
+    }
+  };
+
+  const handleConfirmDelete = () => {
+    if (!photoToDelete) return;
+    if (rememberChoice) {
+      try {
+        localStorage.setItem(DELETE_REMEMBER_KEY, 'true');
+        setDontAskAgain(true);
+      } catch (e) {
+        console.warn('Failed to save delete preference:', e);
       }
-    };
-    reader.readAsDataURL(file);
+    }
+    executeDelete(photoToDelete);
+    setPhotoToDelete(null);
   };
 
   const getModeIcon = (modeId: WindowMode) => {
@@ -307,21 +450,52 @@ export const BackgroundPicker: React.FC<BackgroundPickerProps> = ({
 
                 <div
                   onClick={() => fileInputRef.current?.click()}
-                  className="border-2 border-dashed border-white/20 hover:border-white/50 rounded-2xl p-4 sm:p-5 flex flex-col items-center justify-center text-center cursor-pointer transition-all hover:bg-white/5 group"
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setIsDragging(true);
+                  }}
+                  onDragEnter={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setIsDragging(true);
+                  }}
+                  onDragLeave={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setIsDragging(false);
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setIsDragging(false);
+                    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                      handleProcessFiles(e.dataTransfer.files);
+                    }
+                  }}
+                  className={`border-2 border-dashed rounded-2xl p-4 sm:p-5 flex flex-col items-center justify-center text-center cursor-pointer transition-all group ${
+                    isDragging 
+                      ? 'border-sky-400 bg-sky-500/15 scale-[1.01]' 
+                      : 'border-white/20 hover:border-white/50 hover:bg-white/5'
+                  }`}
                 >
-                  <div className="w-10 sm:w-12 h-10 sm:h-12 rounded-2xl bg-white/10 flex items-center justify-center text-neutral-300 group-hover:scale-105 group-hover:text-white transition-all mb-2">
+                  <div className={`w-10 sm:w-12 h-10 sm:h-12 rounded-2xl flex items-center justify-center transition-all mb-2 ${
+                    isDragging ? 'bg-sky-500 text-white scale-110' : 'bg-white/10 text-neutral-300 group-hover:scale-105 group-hover:text-white'
+                  }`}>
                     <Upload className="w-5 sm:w-6 h-5 sm:h-6" />
                   </div>
                   <span className="text-xs sm:text-sm font-mono font-bold text-neutral-200 group-hover:text-white uppercase tracking-wider">
-                    {isZh ? '点击或拖拽上传自定义背景相片' : 'CLICK OR DROP CUSTOM PHOTO'}
+                    {isDragging
+                      ? (isZh ? '松开鼠标立即上传相片' : 'DROP PHOTO TO UPLOAD')
+                      : (isZh ? '点击或拖拽上传自定义背景相片' : 'CLICK OR DROP CUSTOM PHOTO')}
                   </span>
                   <span className="text-[11px] font-mono text-neutral-400 mt-1">
-                    {isZh ? '支持 JPG / PNG / WebP · 本地极速渲染' : 'Supports JPG, PNG, WebP · High-speed client-side rendering'}
+                    {isZh ? '支持 JPG / PNG / WebP · 自动加入下方画廊暂存' : 'Supports JPG, PNG, WebP · Staged in gallery below'}
                   </span>
                 </div>
               </div>
 
-              {/* Preset Gallery */}
+              {/* Preset Gallery (Default 4 Presets) */}
               <div>
                 <div className="flex items-center gap-1.5 mb-3 text-xs font-mono font-bold uppercase tracking-wider text-neutral-400">
                   <Sparkles className="w-4 h-4 text-amber-300" />
@@ -376,6 +550,100 @@ export const BackgroundPicker: React.FC<BackgroundPickerProps> = ({
                   })}
                 </div>
               </div>
+
+              {/* PHOTO GALLERY (用户上传自定义相片暂存区) */}
+              {customPhotos.length > 0 && (
+                <div className="pt-2 animate-fade-in">
+                  <div className="flex items-center justify-between mb-3 text-xs font-mono font-bold uppercase tracking-wider text-neutral-400">
+                    <div className="flex items-center gap-1.5 text-neutral-200">
+                      <Images className="w-4 h-4 text-sky-400" />
+                      <span>PHOTO GALLERY</span>
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-sky-500/20 text-sky-300 border border-sky-400/20 ml-1">
+                        {customPhotos.length}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      {dontAskAgain && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            localStorage.removeItem(DELETE_REMEMBER_KEY);
+                            setDontAskAgain(false);
+                          }}
+                          className="text-[10px] font-mono text-neutral-500 hover:text-neutral-300 underline"
+                          title={isZh ? '恢复删除确认弹窗提示' : 'Restore delete confirmation prompt'}
+                        >
+                          {isZh ? '恢复删除提示' : 'Reset prompt'}
+                        </button>
+                      )}
+                      <span className="text-[11px] text-neutral-400 font-normal hidden sm:inline">
+                        {isZh ? '点击照片可重新编辑' : 'Click to select and edit'}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                    {customPhotos.map((photo) => {
+                      const isSelected = currentBgUrl === photo.url;
+                      return (
+                        <div
+                          key={photo.id}
+                          onClick={() => {
+                            onSelectPreset(photo.url);
+                            onClose();
+                          }}
+                          className={`group relative rounded-2xl overflow-hidden border cursor-pointer transition-all duration-200 ${
+                            isSelected
+                              ? 'border-white ring-2 ring-white/50 shadow-xl scale-[1.02]'
+                              : 'border-white/10 hover:border-white/30 hover:scale-[1.01]'
+                          }`}
+                        >
+                          {/* Thumbnail Image */}
+                          <div className="relative aspect-video w-full overflow-hidden bg-neutral-950">
+                            <img
+                              src={photo.url}
+                              alt={photo.name}
+                              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+
+                            {/* Active Checkmark Badge on Top-Left */}
+                            {isSelected && (
+                              <div className="absolute top-2.5 left-2.5 w-6 h-6 rounded-full bg-white text-neutral-950 flex items-center justify-center shadow-md z-10">
+                                <Check className="w-3.5 h-3.5 stroke-[3]" />
+                              </div>
+                            )}
+
+                            {/* Small Delete Button on Top-Right */}
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleRequestDeletePhoto(photo);
+                              }}
+                              className="absolute top-2.5 right-2.5 w-6 h-6 rounded-full bg-black/60 hover:bg-rose-600 text-neutral-300 hover:text-white flex items-center justify-center shadow-md backdrop-blur-sm transition-all border border-white/20 hover:border-rose-500 z-10 active:scale-90"
+                              title={isZh ? '从 PHOTO GALLERY 删除此照片' : 'Delete photo from gallery'}
+                            >
+                              <X className="w-3.5 h-3.5 stroke-[2.5]" />
+                            </button>
+
+                            {/* Caption Overlays */}
+                            <div className="absolute bottom-2.5 left-3 right-10 text-left">
+                              <div className="text-sm font-semibold text-white drop-shadow-sm truncate">
+                                {photo.name}
+                              </div>
+                              <div className="text-[10px] font-mono text-neutral-400 mt-0.5">
+                                {new Date(photo.timestamp).toLocaleDateString()}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -395,6 +663,83 @@ export const BackgroundPicker: React.FC<BackgroundPickerProps> = ({
           </button>
         </div>
       </div>
+
+      {/* Delete Confirmation Modal with '保持默认选择' Checkbox */}
+      {photoToDelete && (
+        <div 
+          className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in"
+          onClick={() => setPhotoToDelete(null)}
+        >
+          <div 
+            className="relative w-full max-w-sm bg-neutral-900 border border-white/20 rounded-2xl shadow-2xl p-5 text-neutral-100 flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center gap-2.5 mb-2.5">
+              <div className="w-8 h-8 rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center shrink-0">
+                <Trash2 className="w-4 h-4" />
+              </div>
+              <div>
+                <h3 className="font-mono font-bold text-sm text-white tracking-wide">
+                  {isZh ? '确认删除照片？' : 'DELETE PHOTO?'}
+                </h3>
+                <span className="text-[10px] font-mono text-neutral-400">
+                  {isZh ? '从 PHOTO GALLERY 移除' : 'Remove from PHOTO GALLERY'}
+                </span>
+              </div>
+            </div>
+
+            {/* Thumbnail Preview */}
+            <div className="relative aspect-video w-full rounded-xl overflow-hidden border border-white/10 my-2.5 bg-black/60">
+              <img 
+                src={photoToDelete.url} 
+                alt={photoToDelete.name} 
+                className="w-full h-full object-cover"
+              />
+              <div className="absolute bottom-1.5 left-2 right-2 text-[11px] font-mono text-white/90 truncate bg-black/60 px-2 py-0.5 rounded backdrop-blur-sm">
+                {photoToDelete.name}
+              </div>
+            </div>
+
+            <p className="text-xs font-mono text-neutral-300 leading-relaxed mb-3">
+              {isZh 
+                ? '确认从 PHOTO GALLERY 中删除该照片吗？此操作无法撤销。' 
+                : 'Are you sure you want to remove this photo from your gallery? This cannot be undone.'}
+            </p>
+
+            {/* Checkbox: 保持默认选择 */}
+            <label className="flex items-center gap-2.5 mb-4 p-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 cursor-pointer select-none transition-colors group">
+              <input
+                type="checkbox"
+                checked={rememberChoice}
+                onChange={(e) => setRememberChoice(e.target.checked)}
+                className="w-4 h-4 rounded border-white/30 bg-black/50 text-sky-500 accent-sky-500 cursor-pointer"
+              />
+              <span className="text-[11px] font-mono text-neutral-300 group-hover:text-white transition-colors">
+                {isZh ? '保持默认选择（后续直接删除，不再提示）' : 'Remember choice (do not ask again)'}
+              </span>
+            </label>
+
+            {/* Action Buttons */}
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-white/10">
+              <button
+                type="button"
+                onClick={() => setPhotoToDelete(null)}
+                className="px-3.5 py-1.5 rounded-xl text-xs font-mono font-semibold bg-white/10 text-neutral-300 hover:bg-white/20 hover:text-white transition-colors"
+              >
+                {isZh ? '取消' : 'Cancel'}
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDelete}
+                className="px-4 py-1.5 rounded-xl text-xs font-mono font-bold bg-rose-600 hover:bg-rose-500 text-white shadow-lg shadow-rose-900/30 transition-colors"
+              >
+                {isZh ? '确认删除' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

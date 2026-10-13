@@ -90,5 +90,5 @@ export const DEFAULT_RAIN_SETTINGS: RainSettings = {
   trailDensity: 0.55,
   slideSpeed: 0.55,
   trailLength: 0.70,
-  refraction: 0.00,
+  refraction: 1.55,
 };
