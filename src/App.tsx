@@ -37,7 +37,7 @@ export default function App() {
     windowMode: 'none',
     brushSize: 26,
     backgroundBlur: 16,
-    mistDensity: 0.76,
+    mistDensity: 0.40,
     smoothingLevel: 'natural',
     condensationTexture: true,
     glassRefraction: true,
