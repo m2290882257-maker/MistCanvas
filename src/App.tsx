@@ -2,7 +2,9 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { 
   AspectRatioType, 
   ToolType, 
-  CanvasSettings 
+  CanvasSettings,
+  RainSettings,
+  DEFAULT_RAIN_SETTINGS
 } from './types';
 import { BACKGROUND_PRESETS } from './data/presets';
 import { MistyCanvas } from './components/MistyCanvas';
@@ -13,7 +15,8 @@ import { ReferenceViewerModal } from './components/ReferenceViewerModal';
 import { soundFX } from './utils/audio';
 import { 
   Download, 
-  X 
+  X,
+  CloudRain
 } from 'lucide-react';
 
 export default function App() {
@@ -42,6 +45,9 @@ export default function App() {
     dewdropColor: 'ruby',
     soundEnabled: false,
   });
+
+  // Rain Effect settings (starts OFF by default per instructions)
+  const [rainSettings, setRainSettings] = useState<RainSettings>(DEFAULT_RAIN_SETTINGS);
 
   // History states
   const [canUndo, setCanUndo] = useState(false);
@@ -81,6 +87,11 @@ export default function App() {
       }
       return next;
     });
+  }, []);
+
+  // Update rain settings handler
+  const handleUpdateRainSettings = useCallback((newPartial: Partial<RainSettings>) => {
+    setRainSettings((prev) => ({ ...prev, ...newPartial }));
   }, []);
 
   // Keyboard shortcuts (Ctrl+Z, Ctrl+Y, Space for breathe)
@@ -176,8 +187,32 @@ export default function App() {
           ))}
         </div>
 
-        {/* Right Spacer for balanced centering */}
-        <div className="w-[120px] hidden md:block pointer-events-none" />
+        {/* Right: Rain Effect Toggle Switch (雨滴效果开关) */}
+        <div className="flex items-center justify-end min-w-[120px] pointer-events-auto">
+          <button
+            onClick={() => handleUpdateRainSettings({ enabled: !rainSettings.enabled })}
+            className={`group relative flex items-center gap-2 px-2.5 py-1 sm:px-3 sm:py-1 rounded-full text-xs font-mono font-semibold transition-all duration-300 backdrop-blur-md border ${
+              rainSettings.enabled 
+                ? 'bg-sky-500/25 border-sky-400/50 text-sky-100 shadow-[0_0_15px_rgba(56,189,248,0.35)] scale-[1.02]' 
+                : 'bg-black/50 border-white/15 text-neutral-300 hover:text-white hover:bg-white/10'
+            }`}
+            title={settings.language === 'zh' ? '开启/关闭雨滴玻璃特效' : 'Toggle Rain Glass Effect'}
+          >
+            <CloudRain className={`w-3.5 h-3.5 transition-colors ${rainSettings.enabled ? 'text-sky-300 animate-pulse' : 'text-neutral-400'}`} />
+            <span className="tracking-wider select-none text-[11px] sm:text-xs">
+              {settings.language === 'zh' ? '雨滴' : 'RAIN'}
+            </span>
+            
+            {/* Miniature Toggle Pill */}
+            <div className={`w-6 h-3.5 flex items-center rounded-full p-0.5 transition-colors duration-300 ${
+              rainSettings.enabled ? 'bg-sky-400' : 'bg-neutral-600'
+            }`}>
+              <div className={`bg-white w-2.5 h-2.5 rounded-full shadow-md transform transition-transform duration-300 ${
+                rainSettings.enabled ? 'translate-x-2.5' : 'translate-x-0'
+              }`} />
+            </div>
+          </button>
+        </div>
       </header>
 
       {/* Main Interactive Canvas Area (Full Main / Full Screen) */}
@@ -186,6 +221,7 @@ export default function App() {
           backgroundImageUrl={currentBgUrl}
           aspectRatio={aspectRatio}
           settings={settings}
+          rainSettings={rainSettings}
           activeTool={activeTool}
           onUndoRedoChange={handleUndoRedoChange}
           registerActions={handleRegisterActions}
@@ -207,6 +243,8 @@ export default function App() {
         setActiveTool={setActiveTool}
         settings={settings}
         updateSettings={handleUpdateSettings}
+        rainSettings={rainSettings}
+        updateRainSettings={handleUpdateRainSettings}
         canUndo={canUndo}
         canRedo={canRedo}
         onUndo={() => canvasActionsRef.current?.undo()}

@@ -3,7 +3,9 @@ import {
   ToolType, 
   DewdropColor, 
   CanvasSettings, 
-  SmoothingLevel 
+  SmoothingLevel,
+  RainSettings,
+  DEFAULT_RAIN_SETTINGS
 } from '../types';
 import { 
   RotateCcw, 
@@ -11,7 +13,10 @@ import {
   Volume2, 
   VolumeX, 
   Sliders, 
-  Sparkle
+  Sparkle,
+  ChevronLeft,
+  ChevronRight,
+  CloudRain
 } from 'lucide-react';
 
 interface ToolbarProps {
@@ -19,6 +24,8 @@ interface ToolbarProps {
   setActiveTool: (tool: ToolType) => void;
   settings: CanvasSettings;
   updateSettings: (newSettings: Partial<CanvasSettings>) => void;
+  rainSettings: RainSettings;
+  updateRainSettings: (newSettings: Partial<RainSettings>) => void;
   canUndo: boolean;
   canRedo: boolean;
   onUndo: () => void;
@@ -36,6 +43,8 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   setActiveTool,
   settings,
   updateSettings,
+  rainSettings,
+  updateRainSettings,
   canUndo,
   canRedo,
   onUndo,
@@ -50,6 +59,16 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   const [isPaintHovered, setIsPaintHovered] = useState(false);
   const [isStrokeHovered, setIsStrokeHovered] = useState(false);
   const [hoveredSubTool, setHoveredSubTool] = useState<ToolType | null>(null);
+
+  // Pagination for STROKE menu: 'stroke' | 'rain' (only when rainSettings.enabled)
+  const [strokePage, setStrokePage] = useState<'stroke' | 'rain'>('stroke');
+
+  // If Rain Effect is disabled while on Rain page, automatically return to Stroke page
+  useEffect(() => {
+    if (!rainSettings.enabled && strokePage === 'rain') {
+      setStrokePage('stroke');
+    }
+  }, [rainSettings.enabled, strokePage]);
 
   const paintMenuRef = useRef<HTMLDivElement>(null);
   const strokeMenuRef = useRef<HTMLDivElement>(null);
@@ -160,129 +179,354 @@ export const Toolbar: React.FC<ToolbarProps> = ({
           {/* Ethereal soft diffuse glow */}
           <div className="absolute -inset-4 bg-white/40 rounded-3xl blur-2xl pointer-events-none" />
           
-          <div className="relative p-4 bg-white/95 backdrop-blur-2xl rounded-2xl shadow-[0_0_40px_10px_rgba(255,255,255,0.7),0_15px_35px_rgba(0,0,0,0.35)] border border-white text-neutral-900 min-w-[260px] space-y-3.5">
-            {/* 1. Brush Width */}
-            <div>
-              <div className="flex items-center justify-between text-[11px] font-mono font-bold tracking-wider uppercase mb-1">
-                <span>{isZh ? 'STROKE WIDTH · 笔触粗细' : 'STROKE WIDTH'}</span>
-                <span>{settings.brushSize}PX</span>
-              </div>
-              <input
-                type="range"
-                min="8"
-                max="75"
-                value={settings.brushSize}
-                onChange={(e) => updateSettings({ brushSize: Number(e.target.value) })}
-                className="w-full h-1.5 bg-neutral-200 rounded-lg appearance-none cursor-pointer accent-neutral-900"
-              />
-            </div>
-
-            {/* 2. Background Blur Degree */}
-            <div>
-              <div className="flex items-center justify-between text-[11px] font-mono font-bold tracking-wider uppercase mb-1">
-                <span>{isZh ? 'BACKGROUND BLUR · 虚化' : 'BACKGROUND BLUR'}</span>
-                <span>{settings.backgroundBlur}PX</span>
-              </div>
-              <input
-                type="range"
-                min="0"
-                max="35"
-                value={settings.backgroundBlur}
-                onChange={(e) => updateSettings({ backgroundBlur: Number(e.target.value) })}
-                className="w-full h-1.5 bg-neutral-200 rounded-lg appearance-none cursor-pointer accent-neutral-900"
-              />
-            </div>
-
-            {/* 3. Mist Density */}
-            <div>
-              <div className="flex items-center justify-between text-[11px] font-mono font-bold tracking-wider uppercase mb-1">
-                <span>{isZh ? 'MIST DENSITY · 水雾浓度' : 'MIST DENSITY'}</span>
-                <span>{Math.round(settings.mistDensity * 100)}%</span>
-              </div>
-              <input
-                type="range"
-                min="0.3"
-                max="0.95"
-                step="0.05"
-                value={settings.mistDensity}
-                onChange={(e) => updateSettings({ mistDensity: Number(e.target.value) })}
-                className="w-full h-1.5 bg-neutral-200 rounded-lg appearance-none cursor-pointer accent-neutral-900"
-              />
-            </div>
-
-            {/* 4. Drip Water Trail Density (水痕密度调节) */}
-            <div>
-              <div className="flex items-center justify-between text-[11px] font-mono font-bold tracking-wider uppercase mb-1">
-                <span className="flex items-center gap-1">
-                  <span>{isZh ? 'DRIP DENSITY' : 'DRIP DENSITY'}</span>
-                  <span className="text-[9px] px-1 py-0.2 bg-neutral-100 text-neutral-500 rounded font-normal">
-                    {isZh ? '水痕密度' : 'WATER TRAIL'}
-                  </span>
-                </span>
-                <span className="tabular-nums">
-                  {isZh 
-                    ? (settings.dripDensity <= 0.25 ? '低' : settings.dripDensity >= 0.75 ? '高' : '中')
-                    : (settings.dripDensity <= 0.25 ? 'LOW' : settings.dripDensity >= 0.75 ? 'HIGH' : 'MED')} ({Math.round((settings.dripDensity ?? 0.45) * 100)}%)
-                </span>
-              </div>
-              <input
-                type="range"
-                min="0.1"
-                max="1.0"
-                step="0.05"
-                value={settings.dripDensity ?? 0.45}
-                onChange={(e) => updateSettings({ dripDensity: Number(e.target.value) })}
-                className="w-full h-1.5 bg-neutral-200 rounded-lg appearance-none cursor-pointer accent-neutral-900"
-              />
-              <div className="flex justify-between text-[9px] font-mono text-neutral-400 mt-0.5">
-                <span>{isZh ? '稀疏 (10%)' : 'SUBTLE (10%)'}</span>
-                <span>{isZh ? '密集 (100%)' : 'DENSE (100%)'}</span>
-              </div>
-            </div>
-
-            {/* 5. Smoothing Level */}
-            <div>
-              <div className="text-[11px] font-mono font-bold tracking-wider uppercase mb-1.5">
-                {isZh ? 'SMOOTHING · 防抖平滑' : 'SMOOTHING LEVEL'}
-              </div>
-              <div className="grid grid-cols-3 gap-1">
-                {(['light', 'natural', 'high'] as SmoothingLevel[]).map((lvl) => (
-                  <button
-                    key={lvl}
-                    onClick={() => updateSettings({ smoothingLevel: lvl })}
-                    className={`py-1 text-[10px] font-mono font-bold uppercase rounded-md border transition-all ${
-                      settings.smoothingLevel === lvl
-                        ? 'bg-neutral-900 text-white border-neutral-900 shadow-sm'
-                        : 'bg-neutral-100 text-neutral-600 border-neutral-200 hover:text-neutral-900'
-                    }`}
-                  >
-                    {isZh ? (lvl === 'light' ? '轻微' : lvl === 'natural' ? '自然' : '强力') : lvl}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* 5. Dewdrop Color Swatches (if dewdrop selected) */}
-            {activeTool === 'dewdrop' && (
-              <div className="pt-2 border-t border-neutral-200">
-                <div className="text-[10px] font-mono font-bold tracking-wider uppercase mb-1.5">
-                  DEWDROP COLOR
-                </div>
-                <div className="flex items-center gap-2">
-                  {(['crystal', 'ruby', 'amber', 'cyan'] as DewdropColor[]).map((c) => (
+          <div className="relative p-4 bg-white/95 backdrop-blur-2xl rounded-2xl shadow-[0_0_40px_10px_rgba(255,255,255,0.7),0_15px_35px_rgba(0,0,0,0.35)] border border-white text-neutral-900 w-[280px] space-y-3.5 transition-all duration-200">
+            {/* Header pagination when Rain Effect is enabled */}
+            {rainSettings.enabled && (
+              <div className="flex items-center justify-between pb-2 border-b border-neutral-200/80 text-[11px] font-mono font-bold tracking-wider">
+                {strokePage === 'stroke' ? (
+                  <>
+                    <span className="text-neutral-900 uppercase">
+                      {isZh ? 'STROKE · 笔触设置' : 'PAGE 1 · STROKE'}
+                    </span>
+                    <div className="flex items-center gap-2">
+                      {/* Dots indicator */}
+                      <div className="flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-neutral-900" />
+                        <span className="w-1.5 h-1.5 rounded-full bg-neutral-300" />
+                      </div>
+                      {/* Next button */}
+                      <button
+                        onClick={() => setStrokePage('rain')}
+                        className="flex items-center gap-0.5 px-2 py-0.5 rounded-md bg-neutral-100 hover:bg-neutral-200 text-neutral-800 transition-colors text-[10px] uppercase font-bold"
+                        title={isZh ? '切换至雨滴控制面板' : 'Switch to Rain Controls'}
+                      >
+                        <span>{isZh ? '雨滴' : 'RAIN'}</span>
+                        <ChevronRight className="w-3 h-3" />
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    {/* Prev button */}
                     <button
-                      key={c}
-                      onClick={() => updateSettings({ dewdropColor: c })}
-                      className={`w-5 h-5 rounded-full border transition-all ${
-                        settings.dewdropColor === c ? 'scale-125 ring-2 ring-neutral-900' : 'opacity-60 hover:opacity-100'
-                      } ${
-                        c === 'crystal' ? 'bg-sky-200 border-sky-300' :
-                        c === 'ruby' ? 'bg-rose-500 border-rose-400' :
-                        c === 'amber' ? 'bg-amber-400 border-amber-300' :
-                        'bg-cyan-400 border-cyan-300'
-                      }`}
-                    />
-                  ))}
+                      onClick={() => setStrokePage('stroke')}
+                      className="flex items-center gap-0.5 px-2 py-0.5 rounded-md bg-neutral-100 hover:bg-neutral-200 text-neutral-800 transition-colors text-[10px] uppercase font-bold"
+                      title={isZh ? '返回笔触设置' : 'Return to Stroke'}
+                    >
+                      <ChevronLeft className="w-3 h-3" />
+                      <span>{isZh ? '笔触' : 'STROKE'}</span>
+                    </button>
+                    <div className="flex items-center gap-1 text-neutral-900 uppercase">
+                      <CloudRain className="w-3.5 h-3.5 text-sky-600" />
+                      <span>{isZh ? '雨滴控制' : 'PAGE 2 · RAIN'}</span>
+                    </div>
+                    {/* Dots indicator */}
+                    <div className="flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-neutral-300" />
+                      <span className="w-1.5 h-1.5 rounded-full bg-sky-500" />
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+
+            {/* PAGE 1: STROKE SETTINGS */}
+            {(!rainSettings.enabled || strokePage === 'stroke') && (
+              <div className="space-y-3.5 animate-fade-in">
+                {/* 1. Brush Width */}
+                <div>
+                  <div className="flex items-center justify-between text-[11px] font-mono font-bold tracking-wider uppercase mb-1">
+                    <span>{isZh ? 'STROKE WIDTH · 笔触粗细' : 'STROKE WIDTH'}</span>
+                    <span>{settings.brushSize}PX</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="8"
+                    max="75"
+                    value={settings.brushSize}
+                    onChange={(e) => updateSettings({ brushSize: Number(e.target.value) })}
+                    className="w-full h-1.5 bg-neutral-200 rounded-lg appearance-none cursor-pointer accent-neutral-900"
+                  />
+                </div>
+
+                {/* 2. Background Blur Degree */}
+                <div>
+                  <div className="flex items-center justify-between text-[11px] font-mono font-bold tracking-wider uppercase mb-1">
+                    <span>{isZh ? 'BACKGROUND BLUR · 虚化' : 'BACKGROUND BLUR'}</span>
+                    <span>{settings.backgroundBlur}PX</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0"
+                    max="35"
+                    value={settings.backgroundBlur}
+                    onChange={(e) => updateSettings({ backgroundBlur: Number(e.target.value) })}
+                    className="w-full h-1.5 bg-neutral-200 rounded-lg appearance-none cursor-pointer accent-neutral-900"
+                  />
+                </div>
+
+                {/* 3. Mist Density */}
+                <div>
+                  <div className="flex items-center justify-between text-[11px] font-mono font-bold tracking-wider uppercase mb-1">
+                    <span>{isZh ? 'MIST DENSITY · 水雾浓度' : 'MIST DENSITY'}</span>
+                    <span>{Math.round(settings.mistDensity * 100)}%</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0.3"
+                    max="0.95"
+                    step="0.05"
+                    value={settings.mistDensity}
+                    onChange={(e) => updateSettings({ mistDensity: Number(e.target.value) })}
+                    className="w-full h-1.5 bg-neutral-200 rounded-lg appearance-none cursor-pointer accent-neutral-900"
+                  />
+                </div>
+
+                {/* 4. Drip Water Trail Density (水痕密度调节) */}
+                <div>
+                  <div className="flex items-center justify-between text-[11px] font-mono font-bold tracking-wider uppercase mb-1">
+                    <span className="flex items-center gap-1">
+                      <span>{isZh ? 'DRIP DENSITY' : 'DRIP DENSITY'}</span>
+                      <span className="text-[9px] px-1 py-0.2 bg-neutral-100 text-neutral-500 rounded font-normal">
+                        {isZh ? '水痕密度' : 'WATER TRAIL'}
+                      </span>
+                    </span>
+                    <span className="tabular-nums">
+                      {isZh 
+                        ? (settings.dripDensity <= 0.25 ? '低' : settings.dripDensity >= 0.75 ? '高' : '中')
+                        : (settings.dripDensity <= 0.25 ? 'LOW' : settings.dripDensity >= 0.75 ? 'HIGH' : 'MED')} ({Math.round((settings.dripDensity ?? 0.45) * 100)}%)
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0.1"
+                    max="1.0"
+                    step="0.05"
+                    value={settings.dripDensity ?? 0.45}
+                    onChange={(e) => updateSettings({ dripDensity: Number(e.target.value) })}
+                    className="w-full h-1.5 bg-neutral-200 rounded-lg appearance-none cursor-pointer accent-neutral-900"
+                  />
+                  <div className="flex justify-between text-[9px] font-mono text-neutral-400 mt-0.5">
+                    <span>{isZh ? '稀疏 (10%)' : 'SUBTLE (10%)'}</span>
+                    <span>{isZh ? '密集 (100%)' : 'DENSE (100%)'}</span>
+                  </div>
+                </div>
+
+                {/* 5. Smoothing Level */}
+                <div>
+                  <div className="text-[11px] font-mono font-bold tracking-wider uppercase mb-1.5">
+                    {isZh ? 'SMOOTHING · 防抖平滑' : 'SMOOTHING LEVEL'}
+                  </div>
+                  <div className="grid grid-cols-3 gap-1">
+                    {(['light', 'natural', 'high'] as SmoothingLevel[]).map((lvl) => (
+                      <button
+                        key={lvl}
+                        onClick={() => updateSettings({ smoothingLevel: lvl })}
+                        className={`py-1 text-[10px] font-mono font-bold uppercase rounded-md border transition-all ${
+                          settings.smoothingLevel === lvl
+                            ? 'bg-neutral-900 text-white border-neutral-900 shadow-sm'
+                            : 'bg-neutral-100 text-neutral-600 border-neutral-200 hover:text-neutral-900'
+                        }`}
+                      >
+                        {isZh ? (lvl === 'light' ? '轻微' : lvl === 'natural' ? '自然' : '强力') : lvl}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 6. Dewdrop Color Swatches (if dewdrop selected) */}
+                {activeTool === 'dewdrop' && (
+                  <div className="pt-2 border-t border-neutral-200">
+                    <div className="text-[10px] font-mono font-bold tracking-wider uppercase mb-1.5">
+                      DEWDROP COLOR
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {(['crystal', 'ruby', 'amber', 'cyan'] as DewdropColor[]).map((c) => (
+                        <button
+                          key={c}
+                          onClick={() => updateSettings({ dewdropColor: c })}
+                          className={`w-5 h-5 rounded-full border transition-all ${
+                            settings.dewdropColor === c ? 'scale-125 ring-2 ring-neutral-900' : 'opacity-60 hover:opacity-100'
+                          } ${
+                            c === 'crystal' ? 'bg-sky-200 border-sky-300' :
+                            c === 'ruby' ? 'bg-rose-500 border-rose-400' :
+                            c === 'amber' ? 'bg-amber-400 border-amber-300' :
+                            'bg-cyan-400 border-cyan-300'
+                          }`}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* PAGE 2: RAIN CONTROLS (7 Exact Parameters) */}
+            {rainSettings.enabled && strokePage === 'rain' && (
+              <div className="space-y-3 animate-fade-in max-h-[360px] overflow-y-auto pr-0.5 scrollbar-thin">
+                {/* 1. Rain Rate: 0 - 3, default 1.0 */}
+                <div>
+                  <div className="flex items-center justify-between text-[11px] font-mono font-bold tracking-wider uppercase mb-1">
+                    <span>{isZh ? 'RAIN RATE · 出现频率' : 'RAIN RATE'}</span>
+                    <span className="tabular-nums text-sky-700 font-bold">{rainSettings.rainRate.toFixed(2)}x</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0"
+                    max="3"
+                    step="0.05"
+                    value={rainSettings.rainRate}
+                    onChange={(e) => updateRainSettings({ rainRate: Number(e.target.value) })}
+                    className="w-full h-1.5 bg-neutral-200 rounded-lg appearance-none cursor-pointer accent-sky-600"
+                  />
+                  <div className="flex justify-between text-[9px] font-mono text-neutral-400 mt-0.5">
+                    <span>{isZh ? '停止 (0x)' : 'STOP (0x)'}</span>
+                    <span>{isZh ? '频繁 (3x)' : 'FAST (3x)'}</span>
+                  </div>
+                </div>
+
+                {/* 2. Rain Density: 0 - 1, default 0.65 */}
+                <div>
+                  <div className="flex items-center justify-between text-[11px] font-mono font-bold tracking-wider uppercase mb-1">
+                    <span>{isZh ? 'RAIN DENSITY · 空间密度' : 'RAIN DENSITY'}</span>
+                    <span className="tabular-nums text-sky-700 font-bold">{Math.round(rainSettings.rainDensity * 100)}%</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0"
+                    max="1"
+                    step="0.05"
+                    value={rainSettings.rainDensity}
+                    onChange={(e) => updateRainSettings({ rainDensity: Number(e.target.value) })}
+                    className="w-full h-1.5 bg-neutral-200 rounded-lg appearance-none cursor-pointer accent-sky-600"
+                  />
+                  <div className="flex justify-between text-[9px] font-mono text-neutral-400 mt-0.5">
+                    <span>{isZh ? '稀落 (0%)' : 'SPARSE (0%)'}</span>
+                    <span>{isZh ? '密集 (100%)' : 'DENSE (100%)'}</span>
+                  </div>
+                </div>
+
+                {/* 3. Drop Size: 0.3 - 2.5, default 1.0 */}
+                <div>
+                  <div className="flex items-center justify-between text-[11px] font-mono font-bold tracking-wider uppercase mb-1">
+                    <span>{isZh ? 'DROP SIZE · 雨滴大小' : 'DROP SIZE'}</span>
+                    <span className="tabular-nums text-sky-700 font-bold">{rainSettings.dropSize.toFixed(2)}x</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0.3"
+                    max="2.5"
+                    step="0.05"
+                    value={rainSettings.dropSize}
+                    onChange={(e) => updateRainSettings({ dropSize: Number(e.target.value) })}
+                    className="w-full h-1.5 bg-neutral-200 rounded-lg appearance-none cursor-pointer accent-sky-600"
+                  />
+                  <div className="flex justify-between text-[9px] font-mono text-neutral-400 mt-0.5">
+                    <span>{isZh ? '细小 (0.3x)' : 'SMALL (0.3x)'}</span>
+                    <span>{isZh ? '饱满 (2.5x)' : 'LARGE (2.5x)'}</span>
+                  </div>
+                </div>
+
+                {/* 4. Trail Density: 0 - 1, default 0.75 */}
+                <div>
+                  <div className="flex items-center justify-between text-[11px] font-mono font-bold tracking-wider uppercase mb-1">
+                    <span>{isZh ? 'TRAIL DENSITY · 水痕密度' : 'TRAIL DENSITY'}</span>
+                    <span className="tabular-nums text-sky-700 font-bold">{Math.round(rainSettings.trailDensity * 100)}%</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0"
+                    max="1"
+                    step="0.05"
+                    value={rainSettings.trailDensity}
+                    onChange={(e) => updateRainSettings({ trailDensity: Number(e.target.value) })}
+                    className="w-full h-1.5 bg-neutral-200 rounded-lg appearance-none cursor-pointer accent-sky-600"
+                  />
+                  <div className="flex justify-between text-[9px] font-mono text-neutral-400 mt-0.5">
+                    <span>{isZh ? '无拖尾 (0%)' : 'NONE (0%)'}</span>
+                    <span>{isZh ? '明显水痕 (100%)' : 'HIGH (100%)'}</span>
+                  </div>
+                </div>
+
+                {/* 5. Slide Speed: 0 - 3, default 1.0 */}
+                <div>
+                  <div className="flex items-center justify-between text-[11px] font-mono font-bold tracking-wider uppercase mb-1">
+                    <span>{isZh ? 'SLIDE SPEED · 滑落速度' : 'SLIDE SPEED'}</span>
+                    <span className="tabular-nums text-sky-700 font-bold">{rainSettings.slideSpeed.toFixed(2)}x</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0"
+                    max="3"
+                    step="0.05"
+                    value={rainSettings.slideSpeed}
+                    onChange={(e) => updateRainSettings({ slideSpeed: Number(e.target.value) })}
+                    className="w-full h-1.5 bg-neutral-200 rounded-lg appearance-none cursor-pointer accent-sky-600"
+                  />
+                  <div className="flex justify-between text-[9px] font-mono text-neutral-400 mt-0.5">
+                    <span>{isZh ? '静止 (0x)' : 'STILL (0x)'}</span>
+                    <span>{isZh ? '疾速 (3x)' : 'FAST (3x)'}</span>
+                  </div>
+                </div>
+
+                {/* 6. Trail Length: 0.3 - 1.5, default 1.0 */}
+                <div>
+                  <div className="flex items-center justify-between text-[11px] font-mono font-bold tracking-wider uppercase mb-1">
+                    <span>{isZh ? 'TRAIL LENGTH · 水痕长度' : 'TRAIL LENGTH'}</span>
+                    <span className="tabular-nums text-sky-700 font-bold">{rainSettings.trailLength.toFixed(2)}x</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0.3"
+                    max="1.5"
+                    step="0.05"
+                    value={rainSettings.trailLength}
+                    onChange={(e) => updateRainSettings({ trailLength: Number(e.target.value) })}
+                    className="w-full h-1.5 bg-neutral-200 rounded-lg appearance-none cursor-pointer accent-sky-600"
+                  />
+                  <div className="flex justify-between text-[9px] font-mono text-neutral-400 mt-0.5">
+                    <span>{isZh ? '较短 (0.3x)' : 'SHORT (0.3x)'}</span>
+                    <span>{isZh ? '深长 (1.5x)' : 'LONG (1.5x)'}</span>
+                  </div>
+                </div>
+
+                {/* 7. Refraction: 0 - 2, default 1.0 */}
+                <div>
+                  <div className="flex items-center justify-between text-[11px] font-mono font-bold tracking-wider uppercase mb-1">
+                    <span>{isZh ? 'REFRACTION · 折射强度' : 'REFRACTION'}</span>
+                    <span className="tabular-nums text-sky-700 font-bold">{rainSettings.refraction.toFixed(2)}x</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0"
+                    max="2"
+                    step="0.05"
+                    value={rainSettings.refraction}
+                    onChange={(e) => updateRainSettings({ refraction: Number(e.target.value) })}
+                    className="w-full h-1.5 bg-neutral-200 rounded-lg appearance-none cursor-pointer accent-sky-600"
+                  />
+                  <div className="flex justify-between text-[9px] font-mono text-neutral-400 mt-0.5">
+                    <span>{isZh ? '平滑 (0x)' : 'FLAT (0x)'}</span>
+                    <span>{isZh ? '强折射 (2x)' : 'STRONG (2x)'}</span>
+                  </div>
+                </div>
+
+                {/* Reset Defaults button */}
+                <div className="pt-2 border-t border-neutral-200/80 flex justify-end">
+                  <button
+                    onClick={() => updateRainSettings({
+                      rainRate: 1.0,
+                      rainDensity: 0.65,
+                      dropSize: 1.0,
+                      trailDensity: 0.75,
+                      slideSpeed: 1.0,
+                      trailLength: 1.0,
+                      refraction: 1.0,
+                    })}
+                    className="text-[10px] font-mono text-neutral-500 hover:text-neutral-900 transition-colors underline"
+                  >
+                    {isZh ? '恢复雨滴默认参数' : 'Reset rain defaults'}
+                  </button>
                 </div>
               </div>
             )}

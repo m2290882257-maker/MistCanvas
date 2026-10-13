@@ -70,3 +70,25 @@ export interface DewdropStamp {
   radius: number;
   color: DewdropColor;
 }
+
+export interface RainSettings {
+  enabled: boolean;          // 雨滴效果总开关 (默认 false)
+  rainRate: number;         // 雨滴出现频率 uRainRate (0-3, 默认 1.0)
+  rainDensity: number;      // 雨滴空间密度 uRainDensity (0-1, 默认 0.65)
+  dropSize: number;         // 雨滴大小 uDropSize (0.3-2.5, 默认 1.0)
+  trailDensity: number;     // 水痕拖尾密度 uTrailDensity (0-1, 默认 0.75)
+  slideSpeed: number;       // 滑落速度 uSlideSpeed (0-3, 默认 1.0)
+  trailLength: number;      // 水痕长度 uTrailLength (0.3-1.5, 默认 1.0)
+  refraction: number;       // 折射强度 uRefraction (0-2, 默认 1.0)
+}
+
+export const DEFAULT_RAIN_SETTINGS: RainSettings = {
+  enabled: false,
+  rainRate: 1.0,
+  rainDensity: 0.65,
+  dropSize: 1.0,
+  trailDensity: 0.75,
+  slideSpeed: 1.0,
+  trailLength: 1.0,
+  refraction: 1.0,
+};

@@ -5,18 +5,22 @@ import {
   ToolType, 
   Point, 
   WaterDrip, 
-  DewdropStamp 
+  DewdropStamp,
+  RainSettings,
+  DEFAULT_RAIN_SETTINGS
 } from '../types';
 import { smoothPoints, drawSmoothStroke } from '../utils/smoothing';
 import { createWaterDrip, updateWaterDrips, drawDripTrailOnMask, drawDripHighlights, drawDewdropDot, drawDoodleStamp } from '../utils/drips';
 import { soundFX } from '../utils/audio';
 import { WindowFrameOverlay, drawWindowFrameOnCanvas } from './WindowFrameOverlay';
+import { RainCanvas, RainCanvasRef } from './RainCanvas';
 
 interface MistyCanvasProps {
   backgroundImageUrl: string;
   aspectRatio: AspectRatioType;
   settings: CanvasSettings;
   activeTool: ToolType;
+  rainSettings?: RainSettings;
   onUndoRedoChange?: (canUndo: boolean, canRedo: boolean) => void;
   registerActions?: (actions: {
     undo: () => void;
@@ -33,10 +37,12 @@ export const MistyCanvas: React.FC<MistyCanvasProps> = ({
   aspectRatio,
   settings,
   activeTool,
+  rainSettings,
   onUndoRedoChange,
   registerActions,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
+  const rainCanvasRef = useRef<RainCanvasRef>(null);
   
   // Canvases
   const sharpCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -83,6 +89,9 @@ export const MistyCanvas: React.FC<MistyCanvasProps> = ({
     width: 1920,
     height: 1080,
   });
+
+  // Track sharp background rendering revision for WebGL texture sync
+  const [bgVersion, setBgVersion] = useState<number>(0);
 
   // Calculate pixel dimensions to fill container or match aspect ratio
   const calculateDimensions = useCallback(() => {
@@ -358,6 +367,7 @@ export const MistyCanvas: React.FC<MistyCanvasProps> = ({
     const sharpCtx = sharpCanvas.getContext('2d');
     if (sharpCtx) {
       drawSharpBackground(sharpCtx, width, height);
+      setBgVersion((v) => v + 1);
     }
 
     initMistLayer(resetHistory);
@@ -514,13 +524,21 @@ export const MistyCanvas: React.FC<MistyCanvasProps> = ({
     // 3. Draw water highlights & dewdrops
     expCtx.drawImage(overlay, 0, 0);
 
-    // 4. Draw realistic window scene frame if mode is active
+    // 4. Draw Rain shader layer if active
+    if (rainSettings?.enabled && rainCanvasRef.current) {
+      const rainCanvas = rainCanvasRef.current.getCanvas();
+      if (rainCanvas) {
+        expCtx.drawImage(rainCanvas, 0, 0);
+      }
+    }
+
+    // 5. Draw realistic window scene frame if mode is active
     if (settings.windowMode && settings.windowMode !== 'none') {
       drawWindowFrameOnCanvas(expCtx, dimensions.width, dimensions.height, settings.windowMode);
     }
 
     return exportCanvas.toDataURL('image/png', 0.95);
-  }, [dimensions, settings.windowMode]);
+  }, [dimensions, settings.windowMode, rainSettings?.enabled]);
 
   // Register parent actions
   useEffect(() => {
@@ -890,6 +908,18 @@ export const MistyCanvas: React.FC<MistyCanvasProps> = ({
         <canvas
           ref={overlayCanvasRef}
           className="absolute inset-0 w-full h-full block pointer-events-none z-20"
+        />
+
+        {/* Layer 3.5: Independent WebGL Rain Shader Layer (Rain on Glass Effect) */}
+        <RainCanvas
+          ref={rainCanvasRef}
+          rainSettings={rainSettings || DEFAULT_RAIN_SETTINGS}
+          width={displaySize.width}
+          height={displaySize.height}
+          internalWidth={dimensions.width}
+          internalHeight={dimensions.height}
+          backgroundCanvas={sharpCanvasRef.current}
+          bgVersion={bgVersion}
         />
 
         {/* Layer 4: Immersive Window Frame Overlay (Car, Train, Home scene modes) */}
