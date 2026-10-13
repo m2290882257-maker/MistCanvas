@@ -26,7 +26,7 @@ export const BackgroundPicker: React.FC<BackgroundPickerProps> = ({
     if (!file) return;
 
     if (!file.type.startsWith('image/')) {
-      alert('请选择有效的图片文件 (JPG / PNG / WebP)');
+      alert('Please select a valid image file (JPG / PNG / WebP)');
       return;
     }
 
@@ -50,9 +50,9 @@ export const BackgroundPicker: React.FC<BackgroundPickerProps> = ({
         {/* Header */}
         <div className="flex items-center justify-between pb-4 border-b border-white/10">
           <div>
-            <h2 className="text-lg font-semibold tracking-tight">选择玻璃窗外背景</h2>
-            <p className="text-xs text-neutral-400 mt-0.5">
-              可选择官方精美雨雾摄影预设，或上传你的任意专属图片
+            <h2 className="text-lg font-mono font-bold tracking-wider">WINDOW BACKGROUND</h2>
+            <p className="text-xs font-mono text-neutral-400 mt-0.5">
+              Choose curated atmospheric presets or upload your own custom photo
             </p>
           </div>
           <button
@@ -80,20 +80,20 @@ export const BackgroundPicker: React.FC<BackgroundPickerProps> = ({
             <div className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center text-neutral-300 group-hover:scale-105 group-hover:text-white transition-all mb-2">
               <Upload className="w-6 h-6" />
             </div>
-            <span className="text-sm font-medium text-neutral-200 group-hover:text-white">
-              点击上传你的任意照片 / 图片
+            <span className="text-sm font-mono font-bold text-neutral-200 group-hover:text-white">
+              CLICK OR DROP CUSTOM PHOTO
             </span>
-            <span className="text-xs text-neutral-400 mt-1">
-              支持 JPG、PNG、WebP，本地极速加载，无需等待上传
+            <span className="text-xs font-mono text-neutral-400 mt-1">
+              Supports JPG, PNG, WebP · High-speed client-side rendering
             </span>
           </div>
         </div>
 
         {/* Preset Gallery */}
         <div className="mt-6">
-          <div className="flex items-center gap-1.5 mb-3 text-xs font-semibold uppercase tracking-wider text-neutral-400">
+          <div className="flex items-center gap-1.5 mb-3 text-xs font-mono font-bold uppercase tracking-wider text-neutral-400">
             <Sparkles className="w-4 h-4 text-amber-300" />
-            <span>精选氛围感预设</span>
+            <span>ATMOSPHERIC PRESETS</span>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">

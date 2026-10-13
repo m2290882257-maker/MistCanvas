@@ -49,7 +49,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         <div className="flex items-center justify-between pb-4 border-b border-white/10">
           <div className="flex items-center gap-2">
             <Sliders className="w-5 h-5 text-sky-400" />
-            <h2 className="text-lg font-semibold tracking-tight">水雾画布效果调节</h2>
+            <h2 className="text-lg font-mono font-bold tracking-wider">CANVAS & MIST SETTINGS</h2>
           </div>
           <button
             onClick={onClose}
@@ -60,83 +60,96 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         </div>
 
         <div className="mt-5 space-y-6">
-          {/* 1. Aspect Ratio (界面画幅比例) */}
+          {/* 1. Aspect Ratio */}
           <div>
-            <label className="text-xs font-semibold uppercase tracking-wider text-neutral-400 block mb-2.5">
-              展示画幅比例 (适配电脑横屏与手机竖屏)
+            <label className="text-xs font-mono font-bold uppercase tracking-wider text-neutral-400 block mb-2.5">
+              CANVAS ASPECT RATIO (DESKTOP & MOBILE ADAPTATION)
             </label>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 font-mono">
+              <button
+                onClick={() => setAspectRatio('auto')}
+                className={`flex flex-col items-center justify-center p-3 rounded-2xl border transition-all text-xs font-bold gap-1.5 ${
+                  aspectRatio === 'auto'
+                    ? 'bg-white text-neutral-950 border-white shadow-lg'
+                    : 'bg-white/5 border-white/10 text-neutral-300 hover:bg-white/10'
+                }`}
+              >
+                <Maximize2 className="w-5 h-5 text-sky-400" />
+                <span>FULL MAIN</span>
+                <span className="text-[10px] opacity-70">Expand to Page</span>
+              </button>
+
               <button
                 onClick={() => setAspectRatio('16:9')}
-                className={`flex flex-col items-center justify-center p-3 rounded-2xl border transition-all text-xs font-medium gap-1.5 ${
+                className={`flex flex-col items-center justify-center p-3 rounded-2xl border transition-all text-xs font-bold gap-1.5 ${
                   aspectRatio === '16:9'
                     ? 'bg-white text-neutral-950 border-white shadow-lg'
                     : 'bg-white/5 border-white/10 text-neutral-300 hover:bg-white/10'
                 }`}
               >
                 <Monitor className="w-5 h-5" />
-                <span>16:9 横屏</span>
-                <span className="text-[10px] opacity-70">电脑标准网页</span>
+                <span>16:9 LANDSCAPE</span>
+                <span className="text-[10px] opacity-70">Desktop Standard</span>
               </button>
 
               <button
                 onClick={() => setAspectRatio('9:16')}
-                className={`flex flex-col items-center justify-center p-3 rounded-2xl border transition-all text-xs font-medium gap-1.5 ${
+                className={`flex flex-col items-center justify-center p-3 rounded-2xl border transition-all text-xs font-bold gap-1.5 ${
                   aspectRatio === '9:16'
                     ? 'bg-white text-neutral-950 border-white shadow-lg'
                     : 'bg-white/5 border-white/10 text-neutral-300 hover:bg-white/10'
                 }`}
               >
                 <Smartphone className="w-5 h-5" />
-                <span>9:16 竖屏</span>
-                <span className="text-[10px] opacity-70">手机全屏/短视频</span>
+                <span>9:16 PORTRAIT</span>
+                <span className="text-[10px] opacity-70">Mobile Fullscreen</span>
               </button>
 
               <button
                 onClick={() => setAspectRatio('1:2')}
-                className={`flex flex-col items-center justify-center p-3 rounded-2xl border transition-all text-xs font-medium gap-1.5 ${
+                className={`flex flex-col items-center justify-center p-3 rounded-2xl border transition-all text-xs font-bold gap-1.5 ${
                   aspectRatio === '1:2'
                     ? 'bg-white text-neutral-950 border-white shadow-lg'
                     : 'bg-white/5 border-white/10 text-neutral-300 hover:bg-white/10'
                 }`}
               >
                 <Smartphone className="w-5 h-5 scale-y-110" />
-                <span>1:2 竖屏</span>
-                <span className="text-[10px] opacity-70">修长全面屏手机</span>
+                <span>1:2 TALL</span>
+                <span className="text-[10px] opacity-70">Ultrawide Mobile</span>
               </button>
 
               <button
                 onClick={() => setAspectRatio('1:1')}
-                className={`flex flex-col items-center justify-center p-3 rounded-2xl border transition-all text-xs font-medium gap-1.5 ${
+                className={`flex flex-col items-center justify-center p-3 rounded-2xl border transition-all text-xs font-bold gap-1.5 ${
                   aspectRatio === '1:1'
                     ? 'bg-white text-neutral-950 border-white shadow-lg'
                     : 'bg-white/5 border-white/10 text-neutral-300 hover:bg-white/10'
                 }`}
               >
                 <Maximize2 className="w-5 h-5" />
-                <span>1:1 方形</span>
-                <span className="text-[10px] opacity-70">社交贴图/头像</span>
+                <span>1:1 SQUARE</span>
+                <span className="text-[10px] opacity-70">Social & Avatar</span>
               </button>
             </div>
           </div>
 
-          {/* 2. Line Smoothing (线条平滑圆滑处理) */}
+          {/* 2. Line Smoothing */}
           <div className="pt-2 border-t border-white/10">
             <div className="flex items-center justify-between mb-2">
-              <label className="text-xs font-semibold uppercase tracking-wider text-neutral-400">
-                颤抖线条圆滑平滑处理
+              <label className="text-xs font-mono font-bold uppercase tracking-wider text-neutral-400">
+                STROKE JITTER SMOOTHING
               </label>
-              <span className="text-xs text-sky-400 font-medium">防抖流畅曲线</span>
+              <span className="text-xs font-mono text-sky-400 font-bold">ANTI-TREMOR</span>
             </div>
-            <p className="text-xs text-neutral-400 mb-2.5">
-              消除鼠标或手指快速滑动时的微小颤抖，智能贝塞尔曲线重构，使字迹更加圆润优雅。
+            <p className="text-xs font-mono text-neutral-400 mb-2.5">
+              Eliminates micro hand-tremor on mouse or touch gestures with smooth Bezier curve reconstruction.
             </p>
             <div className="grid grid-cols-3 gap-2">
               {(
                 [
-                  { id: 'light', label: '轻度平滑', desc: '保留手写细节' },
-                  { id: 'natural', label: '自然流畅', desc: '推荐最佳手感' },
-                  { id: 'high', label: '高度圆滑', desc: '强力消除抖动' },
+                  { id: 'light', label: 'LIGHT', desc: 'Raw handwriting details' },
+                  { id: 'natural', label: 'NATURAL', desc: 'Optimal cursive balance' },
+                  { id: 'high', label: 'HIGH', desc: 'Maximum anti-jitter' },
                 ] as { id: SmoothingLevel; label: string; desc: string }[]
               ).map((lvl) => (
                 <button
@@ -148,18 +161,18 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       : 'bg-white/5 border-white/10 text-neutral-300 hover:bg-white/10'
                   }`}
                 >
-                  <div className="text-xs font-semibold">{lvl.label}</div>
-                  <div className="text-[10px] text-neutral-400">{lvl.desc}</div>
+                  <div className="text-xs font-mono font-bold">{lvl.label}</div>
+                  <div className="text-[10px] font-mono text-neutral-400">{lvl.desc}</div>
                 </button>
               ))}
             </div>
           </div>
 
-          {/* 3. Background Blur Degree (背景虚化程度) */}
+          {/* 3. Background Blur Degree */}
           <div className="pt-2 border-t border-white/10">
             <div className="flex items-center justify-between mb-2">
-              <label className="text-xs font-semibold uppercase tracking-wider text-neutral-400">
-                背景虚化程度 (毛玻璃景深)
+              <label className="text-xs font-mono font-bold uppercase tracking-wider text-neutral-400">
+                BACKGROUND BLUR
               </label>
               <span className="text-xs font-mono tabular-nums text-neutral-200">
                 {settings.backgroundBlur}px
@@ -174,18 +187,18 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               onChange={(e) => updateSettings({ backgroundBlur: Number(e.target.value) })}
               className="w-full h-2 bg-neutral-700 rounded-lg appearance-none cursor-pointer accent-sky-400"
             />
-            <div className="flex justify-between text-[10px] text-neutral-500 mt-1">
-              <span>清晰可见 (0px)</span>
-              <span>默认柔焦 (16px)</span>
-              <span>梦幻光斑 (35px)</span>
+            <div className="flex justify-between text-[10px] font-mono text-neutral-500 mt-1">
+              <span>SHARP (0px)</span>
+              <span>SOFT FOCUS (16px)</span>
+              <span>DREAMY BOKEH (35px)</span>
             </div>
           </div>
 
-          {/* 4. Mist Density (水雾厚度与白雾浓度) */}
+          {/* 4. Mist Density */}
           <div className="pt-2 border-t border-white/10">
             <div className="flex items-center justify-between mb-2">
-              <label className="text-xs font-semibold uppercase tracking-wider text-neutral-400">
-                水雾浓度 (白雾冷凝厚度)
+              <label className="text-xs font-mono font-bold uppercase tracking-wider text-neutral-400">
+                MIST DENSITY
               </label>
               <span className="text-xs font-mono tabular-nums text-neutral-200">
                 {Math.round(settings.mistDensity * 100)}%
@@ -200,16 +213,16 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               onChange={(e) => updateSettings({ mistDensity: Number(e.target.value) })}
               className="w-full h-2 bg-neutral-700 rounded-lg appearance-none cursor-pointer accent-sky-400"
             />
-            <div className="flex justify-between text-[10px] text-neutral-500 mt-1">
-              <span>薄雾清透 (30%)</span>
-              <span>温热浓雾 (95%)</span>
+            <div className="flex justify-between text-[10px] font-mono text-neutral-500 mt-1">
+              <span>CLEAR MIST (30%)</span>
+              <span>HEAVY STEAM (95%)</span>
             </div>
           </div>
 
           {/* 5. Physical water drips options */}
           <div className="pt-2 border-t border-white/10 space-y-3">
-            <label className="text-xs font-semibold uppercase tracking-wider text-neutral-400 block">
-              真实玻璃水滴与冷凝质感
+            <label className="text-xs font-mono font-bold uppercase tracking-wider text-neutral-400 block">
+              REALISTIC CONDENSATION & DROPLETS
             </label>
 
             {/* Condensation Texture Toggle */}
@@ -217,8 +230,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               <div className="flex items-center gap-2">
                 <Sparkles className="w-4 h-4 text-sky-300" />
                 <div>
-                  <div className="text-xs font-medium">微细冷凝水滴纹理</div>
-                  <div className="text-[10px] text-neutral-400">模拟附着在玻璃表面的晶莹微小冷凝水珠</div>
+                  <div className="text-xs font-mono font-bold">MICRO CONDENSATION TEXTURE</div>
+                  <div className="text-[10px] font-mono text-neutral-400">Tiny dew beads clinging to cold window glass</div>
                 </div>
               </div>
               <input
@@ -234,8 +247,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               <div className="flex items-center gap-2">
                 <Droplet className="w-4 h-4 text-amber-300" />
                 <div>
-                  <div className="text-xs font-medium">擦拭边沿水光折射</div>
-                  <div className="text-[10px] text-neutral-400">手指划过边沿堆积的水膜高光光晕</div>
+                  <div className="text-xs font-mono font-bold">WIPED EDGE WATER REFRACTION</div>
+                  <div className="text-[10px] font-mono text-neutral-400">Glistening specular meniscus rim on stroke boundaries</div>
                 </div>
               </div>
               <input
@@ -251,8 +264,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               <div className="flex items-center gap-2">
                 <Droplet className="w-4 h-4 text-rose-300" />
                 <div>
-                  <div className="text-xs font-medium">笔触停留自动下淌泪痕</div>
-                  <div className="text-[10px] text-neutral-400">笔画末梢随机生成顺着玻璃重力缓缓滑落的水痕</div>
+                  <div className="text-xs font-mono font-bold">AUTO TRICKLE WATER DRIPS</div>
+                  <div className="text-[10px] font-mono text-neutral-400">Gravity droplets slide down vertically on stroke pauses</div>
                 </div>
               </div>
               <input
@@ -265,23 +278,23 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           </div>
 
           {/* Quick Actions at bottom */}
-          <div className="pt-3 border-t border-white/10 flex items-center justify-between gap-3">
+          <div className="pt-3 border-t border-white/10 flex items-center justify-between gap-3 font-mono">
             <button
               onClick={() => {
                 onClearToGlass();
                 onClose();
               }}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium text-neutral-300 hover:text-white bg-white/5 hover:bg-white/10 transition-colors"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-neutral-300 hover:text-white bg-white/5 hover:bg-white/10 transition-colors uppercase"
             >
               <Trash2 className="w-4 h-4 text-rose-400" />
-              <span>擦亮整块玻璃</span>
+              <span>CLEAR ALL MIST</span>
             </button>
 
             <button
               onClick={onClose}
-              className="px-5 py-2 rounded-xl text-xs font-semibold bg-white text-neutral-950 hover:bg-neutral-200 transition-colors shadow-md"
+              className="px-5 py-2 rounded-xl text-xs font-bold uppercase bg-white text-neutral-950 hover:bg-neutral-200 transition-colors shadow-md"
             >
-              完成并继续写字
+              APPLY & CONTINUE
             </button>
           </div>
         </div>

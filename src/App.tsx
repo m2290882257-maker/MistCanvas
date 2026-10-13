@@ -12,24 +12,18 @@ import { BackgroundPicker } from './components/BackgroundPicker';
 import { ReferenceViewerModal } from './components/ReferenceViewerModal';
 import { soundFX } from './utils/audio';
 import { 
-  Droplets, 
   Download, 
-  ImageIcon, 
-  Sliders, 
-  Wind, 
-  X, 
-  Check, 
-  Share2 
+  X 
 } from 'lucide-react';
 
 export default function App() {
-  // Screen ratio state: default 16:9 on desktop, auto-detect mobile for 9:16
-  const [aspectRatio, setAspectRatio] = useState<AspectRatioType>('16:9');
+  // Screen ratio state: default 'auto' to expand canvas to the entire main page
+  const [aspectRatio, setAspectRatio] = useState<AspectRatioType>('auto');
 
   // Background image state (default to romantic rose bouquet matching reference photo)
   const [currentBgUrl, setCurrentBgUrl] = useState<string>(BACKGROUND_PRESETS[0].url);
 
-  // Active tool
+  // Active tool: 'wipe' by default
   const [activeTool, setActiveTool] = useState<ToolType>('wipe');
 
   // Settings
@@ -40,7 +34,7 @@ export default function App() {
     smoothingLevel: 'natural',
     condensationTexture: true,
     glassRefraction: true,
-    dripAutoTrickle: true,
+    dripAutoTrickle: false,
     dripSpeed: 2.5,
     dewdropColor: 'ruby',
     soundEnabled: false,
@@ -146,79 +140,45 @@ export default function App() {
 
   return (
     <div className="relative w-full h-[100dvh] min-h-screen overflow-hidden flex flex-col bg-neutral-950 font-sans text-neutral-100">
-      {/* 1. Header (Following Top Bar Contract: 3 zones, gap-8) */}
-      <header className="flex items-center justify-between gap-8 px-4 md:px-8 py-3.5 border-b border-white/10 bg-neutral-950/80 backdrop-blur-md z-30 shrink-0">
-        {/* Zone 1: Single text element wordmark */}
-        <div className="flex items-center gap-2 shrink-0">
-          <Droplets className="w-5 h-5 text-sky-400" />
-          <span className="text-base md:text-lg font-bold tracking-tight text-white whitespace-nowrap">
+      {/* 1. Top Bar: Title & Aspect Ratio Navigator (Float over full main canvas) */}
+      <header className="absolute top-0 left-0 right-0 z-30 flex items-center justify-between gap-4 px-4 md:px-8 py-3 pointer-events-none">
+        {/* Left: Brand Title */}
+        <div className="flex items-center gap-2.5 pointer-events-auto">
+          <span 
+            style={{ fontFamily: 'Courier New' }} 
+            className="font-bold tracking-wider text-base text-white/95 drop-shadow-md select-none"
+          >
             MistyGlass
           </span>
-          <span className="text-xs text-neutral-400 font-normal hidden sm:inline">
-            起雾玻璃水滴擦画
+          <span className="text-[10px] font-mono tracking-widest px-2 py-0.5 rounded-full bg-white/10 text-neutral-300 border border-white/15 backdrop-blur-sm uppercase select-none">
+            CANVAS
           </span>
         </div>
 
-        {/* Zone 2: Concise single-line navigation & aspect indicators */}
-        <nav className="hidden md:flex items-center gap-6 text-xs font-medium text-neutral-400">
-          <div className="flex items-center gap-1.5 p-1 bg-white/5 rounded-xl border border-white/10">
+        {/* Center: Aspect Ratio Navigator (顶部比例导航器) */}
+        <div className="flex items-center gap-1 p-0.5 sm:p-1 bg-black/60 backdrop-blur-md rounded-full border border-white/15 shadow-xl font-mono text-[11px] sm:text-xs pointer-events-auto">
+          {(['auto', '16:9', '9:16', '1:1', '1:2'] as AspectRatioType[]).map((ratio) => (
             <button
-              onClick={() => setAspectRatio('16:9')}
-              className={`px-2.5 py-1 rounded-lg transition-all ${
-                aspectRatio === '16:9' ? 'bg-white text-neutral-950 font-semibold shadow-sm' : 'hover:text-white'
+              key={ratio}
+              onClick={() => setAspectRatio(ratio)}
+              className={`px-2.5 sm:px-3 py-0.5 sm:py-1 rounded-full uppercase transition-all duration-200 ${
+                aspectRatio === ratio
+                  ? 'bg-white text-neutral-950 font-bold shadow-md shadow-white/20 scale-[1.02]'
+                  : 'text-neutral-300 hover:text-white hover:bg-white/10'
               }`}
+              title={`Switch canvas aspect ratio to ${ratio}`}
             >
-              16:9 横屏 (电脑)
+              {ratio}
             </button>
-            <button
-              onClick={() => setAspectRatio('9:16')}
-              className={`px-2.5 py-1 rounded-lg transition-all ${
-                aspectRatio === '9:16' ? 'bg-white text-neutral-950 font-semibold shadow-sm' : 'hover:text-white'
-              }`}
-            >
-              9:16 竖屏 (手机)
-            </button>
-            <button
-              onClick={() => setAspectRatio('1:2')}
-              className={`px-2.5 py-1 rounded-lg transition-all ${
-                aspectRatio === '1:2' ? 'bg-white text-neutral-950 font-semibold shadow-sm' : 'hover:text-white'
-              }`}
-            >
-              1:2 竖屏 (全屏手机)
-            </button>
-            <button
-              onClick={() => setAspectRatio('1:1')}
-              className={`px-2.5 py-1 rounded-lg transition-all ${
-                aspectRatio === '1:1' ? 'bg-white text-neutral-950 font-semibold shadow-sm' : 'hover:text-white'
-              }`}
-            >
-              1:1 方形
-            </button>
-          </div>
-        </nav>
-
-        {/* Zone 3: 1 primary action */}
-        <div className="flex items-center gap-2.5 shrink-0">
-          <button
-            onClick={() => setIsBgPickerOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-neutral-200 bg-white/10 hover:bg-white/15 rounded-xl transition-colors whitespace-nowrap"
-          >
-            <ImageIcon className="w-3.5 h-3.5 text-rose-300" />
-            <span>更换背景</span>
-          </button>
-
-          <button
-            onClick={handleExport}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-medium text-white bg-gradient-to-r from-rose-500 to-amber-500 hover:from-rose-400 hover:to-amber-400 rounded-xl transition-all shadow-md whitespace-nowrap active:scale-95"
-          >
-            <Download className="w-3.5 h-3.5" />
-            <span className="font-semibold">保存作品</span>
-          </button>
+          ))}
         </div>
+
+        {/* Right Spacer for balanced centering */}
+        <div className="w-[120px] hidden md:block pointer-events-none" />
       </header>
 
-      {/* 2. Main Interactive Canvas Area */}
-      <main className="relative flex-1 min-h-0 w-full overflow-hidden flex items-center justify-center p-2 pb-24 md:pb-28">
+      {/* Main Interactive Canvas Area (Full Main / Full Screen) */}
+      <main className="relative flex-1 min-h-0 w-full h-full overflow-hidden flex items-center justify-center p-0 m-0">
         <MistyCanvas
           backgroundImageUrl={currentBgUrl}
           aspectRatio={aspectRatio}
@@ -229,8 +189,8 @@ export default function App() {
         />
 
         {/* Ambient Subtle Instructions when starting */}
-        <div className="absolute top-3 left-1/2 -translate-x-1/2 pointer-events-none z-20 flex items-center gap-2 px-3 py-1.5 rounded-full bg-neutral-900/60 backdrop-blur-md border border-white/10 text-[11px] text-neutral-300 transition-opacity">
-          <span>用手指或鼠标在水雾玻璃上写字划线 · 自动圆滑防抖</span>
+        <div className="absolute top-14 left-1/2 -translate-x-1/2 pointer-events-none z-20 flex items-center gap-2 px-3 py-1.5 rounded-full bg-neutral-900/60 backdrop-blur-md border border-white/10 text-[11px] font-mono text-neutral-300/80 transition-opacity">
+          <span>Swipe cursor or fingertip across steamy glass · Smooth jitter dampening</span>
         </div>
       </main>
 
@@ -287,7 +247,7 @@ export default function App() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="w-full flex items-center justify-between pb-3 border-b border-white/10 mb-4">
-              <h3 className="text-base font-semibold">保存你的起雾玻璃作品</h3>
+              <h3 className="text-base font-mono font-bold tracking-wider">SAVE ARTWORK</h3>
               <button
                 onClick={() => setExportedImageUrl(null)}
                 className="p-1 rounded-full hover:bg-white/10 text-neutral-400 hover:text-white"
@@ -307,23 +267,23 @@ export default function App() {
 
             {/* Actions */}
             <div className="w-full flex flex-col sm:flex-row items-center justify-between gap-3">
-              <span className="text-xs text-neutral-400">
-                高清成图包含擦拭水痕、流淌水珠与背景光晕
+              <span className="text-xs font-mono text-neutral-400">
+                High-resolution export with wiped mist, water drips & bokeh
               </span>
 
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => downloadImage('jpg')}
-                  className="px-4 py-2 rounded-xl text-xs font-medium bg-white/10 hover:bg-white/20 text-neutral-200 transition-colors"
+                  className="px-4 py-2 rounded-xl text-xs font-mono font-bold uppercase bg-white/10 hover:bg-white/20 text-neutral-200 transition-colors"
                 >
-                  下载 JPG
+                  JPG
                 </button>
                 <button
                   onClick={() => downloadImage('png')}
-                  className="px-5 py-2 rounded-xl text-xs font-semibold bg-white text-neutral-950 hover:bg-neutral-200 transition-colors shadow-md flex items-center gap-1.5"
+                  className="px-5 py-2 rounded-xl text-xs font-mono font-bold uppercase bg-white text-neutral-950 hover:bg-neutral-200 transition-colors shadow-md flex items-center gap-1.5"
                 >
                   <Download className="w-4 h-4" />
-                  <span>下载高清 PNG</span>
+                  <span>DOWNLOAD PNG</span>
                 </button>
               </div>
             </div>

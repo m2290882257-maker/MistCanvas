@@ -51,10 +51,17 @@ export const MistyCanvas: React.FC<MistyCanvasProps> = ({
   const currentPointsRef = useRef<Point[]>([]);
   const lastSoundTimeRef = useRef<number>(0);
 
-  // Undo / Redo history stored as ImageData of mistCanvas
-  const historyRef = useRef<ImageData[]>([]);
+  // History Snapshot interface for complete undo / redo fidelity
+  interface HistorySnapshot {
+    mist: ImageData;
+    overlay: ImageData;
+    dewdrops: DewdropStamp[];
+  }
+
+  // Undo / Redo history stored with full layer states
+  const historyRef = useRef<HistorySnapshot[]>([]);
   const historyIndexRef = useRef<number>(-1);
-  const maxHistory = 15;
+  const maxHistory = 20;
 
   // Active water drips
   const activeDripsRef = useRef<WaterDrip[]>([]);
@@ -66,47 +73,54 @@ export const MistyCanvas: React.FC<MistyCanvasProps> = ({
 
   // Display dimension in CSS pixels
   const [displaySize, setDisplaySize] = useState<{ width: number; height: number }>({
-    width: 800,
-    height: 450,
+    width: 1200,
+    height: 800,
   });
 
   // Dynamic internal canvas dimension based on selected aspect ratio
   const [dimensions, setDimensions] = useState<{ width: number; height: number }>({
-    width: 1600,
-    height: 900,
+    width: 1920,
+    height: 1080,
   });
 
-  // Calculate pixel dimensions for aspect ratio
+  // Calculate pixel dimensions to fill container or match aspect ratio
   const calculateDimensions = useCallback(() => {
     if (!containerRef.current) return;
     const rect = containerRef.current.getBoundingClientRect();
-    const availableW = Math.max(260, (rect.width || window.innerWidth) - 24);
-    const availableH = Math.max(200, (rect.height || window.innerHeight - 180) - 24);
+    const availableW = Math.max(300, Math.floor(rect.width || window.innerWidth));
+    const availableH = Math.max(200, Math.floor(rect.height || window.innerHeight));
 
-    let targetRatio = 16 / 9;
-    if (aspectRatio === '16:9') targetRatio = 16 / 9;
-    else if (aspectRatio === '9:16') targetRatio = 9 / 16;
-    else if (aspectRatio === '1:2') targetRatio = 1 / 2;
-    else if (aspectRatio === '1:1') targetRatio = 1;
-    else if (aspectRatio === 'auto') targetRatio = availableW / availableH;
+    let finalW = availableW;
+    let finalH = availableH;
 
-    let dw = availableW;
-    let dh = availableW / targetRatio;
+    if (aspectRatio === 'auto') {
+      finalW = availableW;
+      finalH = availableH;
+    } else {
+      let targetRatio = 16 / 9;
+      if (aspectRatio === '16:9') targetRatio = 16 / 9;
+      else if (aspectRatio === '9:16') targetRatio = 9 / 16;
+      else if (aspectRatio === '1:2') targetRatio = 1 / 2;
+      else if (aspectRatio === '1:1') targetRatio = 1;
 
-    if (dh > availableH) {
-      dh = availableH;
-      dw = availableH * targetRatio;
+      let dw = availableW;
+      let dh = availableW / targetRatio;
+
+      if (dh > availableH) {
+        dh = availableH;
+        dw = availableH * targetRatio;
+      }
+
+      finalW = Math.max(200, Math.round(dw));
+      finalH = Math.max(200, Math.round(dh));
     }
-
-    const finalW = Math.max(200, Math.round(dw));
-    const finalH = Math.max(200, Math.round(dh));
 
     setDisplaySize({
       width: finalW,
       height: finalH,
     });
 
-    // Set high-res internal canvas (maintain retina crispness)
+    // High-res internal canvas
     const dpr = Math.min(window.devicePixelRatio || 1.5, 2);
     setDimensions({
       width: Math.round(finalW * dpr),
@@ -300,14 +314,29 @@ export const MistyCanvas: React.FC<MistyCanvasProps> = ({
     }
     ctx.restore();
 
-    // Reset drips & dewdrops
+    // Reset drips & dewdrops and clear overlay canvas
     activeDripsRef.current = [];
     dewdropsRef.current = [];
+    const overlayCanvas = overlayCanvasRef.current;
+    if (overlayCanvas) {
+      const octx = overlayCanvas.getContext('2d');
+      if (octx) {
+        octx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+      }
+    }
 
     // Push initial state to history
     if (resetHistory) {
-      const initialData = ctx.getImageData(0, 0, width, height);
-      historyRef.current = [initialData];
+      const initialMist = ctx.getImageData(0, 0, width, height);
+      const initialOverlay = overlayCanvas 
+        ? overlayCanvas.getContext('2d')?.getImageData(0, 0, width, height) || new ImageData(width, height)
+        : new ImageData(width, height);
+
+      historyRef.current = [{
+        mist: initialMist,
+        overlay: initialOverlay,
+        dewdrops: [],
+      }];
       historyIndexRef.current = 0;
       onUndoRedoChangeRef.current?.(false, false);
     }
@@ -339,17 +368,24 @@ export const MistyCanvas: React.FC<MistyCanvasProps> = ({
     renderAllLayers(true);
   }, [dimensions.width, dimensions.height]); // ONLY when pixel dimensions change, never on re-render
 
-  // History management: save current mist state
+  // History management: save current mist and overlay state
   const saveHistoryState = useCallback(() => {
     const mistCanvas = mistCanvasRef.current;
-    if (!mistCanvas) return;
-    const ctx = mistCanvas.getContext('2d');
-    if (!ctx) return;
+    const overlayCanvas = overlayCanvasRef.current;
+    if (!mistCanvas || !overlayCanvas) return;
+    const mctx = mistCanvas.getContext('2d');
+    const octx = overlayCanvas.getContext('2d');
+    if (!mctx || !octx) return;
 
-    const currentState = ctx.getImageData(0, 0, mistCanvas.width, mistCanvas.height);
+    const snapshot = {
+      mist: mctx.getImageData(0, 0, mistCanvas.width, mistCanvas.height),
+      overlay: octx.getImageData(0, 0, overlayCanvas.width, overlayCanvas.height),
+      dewdrops: [...dewdropsRef.current],
+    };
+
     // Slice off any redo branch
     const newHistory = historyRef.current.slice(0, historyIndexRef.current + 1);
-    newHistory.push(currentState);
+    newHistory.push(snapshot);
     if (newHistory.length > maxHistory) {
       newHistory.shift();
     }
@@ -359,17 +395,24 @@ export const MistyCanvas: React.FC<MistyCanvasProps> = ({
     onUndoRedoChangeRef.current?.(historyIndexRef.current > 0, false);
   }, []);
 
-  // Undo Action
+  // Undo Action: cleanly restore mist, overlay, and dewdrops; kill running drips immediately
   const handleUndo = useCallback(() => {
     if (historyIndexRef.current <= 0) return;
     const mistCanvas = mistCanvasRef.current;
-    if (!mistCanvas) return;
-    const ctx = mistCanvas.getContext('2d');
-    if (!ctx) return;
+    const overlayCanvas = overlayCanvasRef.current;
+    if (!mistCanvas || !overlayCanvas) return;
+    const mctx = mistCanvas.getContext('2d');
+    const octx = overlayCanvas.getContext('2d');
+    if (!mctx || !octx) return;
+
+    // Immediately stop and cancel any running drips so trails cannot reappear!
+    activeDripsRef.current = [];
 
     historyIndexRef.current -= 1;
-    const state = historyRef.current[historyIndexRef.current];
-    ctx.putImageData(state, 0, 0);
+    const snapshot = historyRef.current[historyIndexRef.current];
+    mctx.putImageData(snapshot.mist, 0, 0);
+    octx.putImageData(snapshot.overlay, 0, 0);
+    dewdropsRef.current = [...snapshot.dewdrops];
 
     onUndoRedoChangeRef.current?.(
       historyIndexRef.current > 0,
@@ -377,17 +420,23 @@ export const MistyCanvas: React.FC<MistyCanvasProps> = ({
     );
   }, []);
 
-  // Redo Action
+  // Redo Action: cleanly advance state; stop running drips
   const handleRedo = useCallback(() => {
     if (historyIndexRef.current >= historyRef.current.length - 1) return;
     const mistCanvas = mistCanvasRef.current;
-    if (!mistCanvas) return;
-    const ctx = mistCanvas.getContext('2d');
-    if (!ctx) return;
+    const overlayCanvas = overlayCanvasRef.current;
+    if (!mistCanvas || !overlayCanvas) return;
+    const mctx = mistCanvas.getContext('2d');
+    const octx = overlayCanvas.getContext('2d');
+    if (!mctx || !octx) return;
+
+    activeDripsRef.current = [];
 
     historyIndexRef.current += 1;
-    const state = historyRef.current[historyIndexRef.current];
-    ctx.putImageData(state, 0, 0);
+    const snapshot = historyRef.current[historyIndexRef.current];
+    mctx.putImageData(snapshot.mist, 0, 0);
+    octx.putImageData(snapshot.overlay, 0, 0);
+    dewdropsRef.current = [...snapshot.dewdrops];
 
     onUndoRedoChangeRef.current?.(
       historyIndexRef.current > 0,
@@ -398,13 +447,16 @@ export const MistyCanvas: React.FC<MistyCanvasProps> = ({
   // Clear all to crystal clear glass
   const handleClearToGlass = useCallback(() => {
     const mistCanvas = mistCanvasRef.current;
-    if (!mistCanvas) return;
-    const ctx = mistCanvas.getContext('2d');
-    if (!ctx) return;
+    const overlayCanvas = overlayCanvasRef.current;
+    if (!mistCanvas || !overlayCanvas) return;
+    const mctx = mistCanvas.getContext('2d');
+    const octx = overlayCanvas.getContext('2d');
+    if (!mctx || !octx) return;
 
-    ctx.clearRect(0, 0, mistCanvas.width, mistCanvas.height);
     activeDripsRef.current = [];
     dewdropsRef.current = [];
+    mctx.clearRect(0, 0, mistCanvas.width, mistCanvas.height);
+    octx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
     saveHistoryState();
   }, [saveHistoryState]);
 
@@ -414,10 +466,21 @@ export const MistyCanvas: React.FC<MistyCanvasProps> = ({
     setIsBreathing(true);
 
     setTimeout(() => {
+      // Clear overlay completely (remove all dewdrops/drip marks)
+      const overlayCanvas = overlayCanvasRef.current;
+      if (overlayCanvas) {
+        const octx = overlayCanvas.getContext('2d');
+        if (octx) {
+          octx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+        }
+      }
+      activeDripsRef.current = [];
+      dewdropsRef.current = [];
+
       initMistLayer(false);
       saveHistoryState();
       setIsBreathing(false);
-    }, 600);
+    }, 500);
   }, [initMistLayer, saveHistoryState]);
 
   // Add random trickling water drip
@@ -482,7 +545,7 @@ export const MistyCanvas: React.FC<MistyCanvasProps> = ({
           activeDripsRef.current = updateWaterDrips(
             activeDripsRef.current,
             mistCanvas.height,
-            settings.dripSpeed * 0.8
+            settingsRef.current.dripSpeed * 0.8
           );
 
           // Carve trails onto mistCanvas
@@ -502,6 +565,14 @@ export const MistyCanvas: React.FC<MistyCanvasProps> = ({
           activeDripsRef.current.forEach(drip => {
             drawDripHighlights(overlayCtx, drip);
           });
+
+          // Check if all drips finished trickling
+          const stillRunning = activeDripsRef.current.some(d => !d.isFinished);
+          if (!stillRunning && activeDripsRef.current.length > 0) {
+            activeDripsRef.current = [];
+            // Save state once drips finish trickling so undo will cleanly revert the entire drip trail
+            saveHistoryState();
+          }
         }
       }
 
@@ -512,7 +583,7 @@ export const MistyCanvas: React.FC<MistyCanvasProps> = ({
     return () => {
       if (animFrameIdRef.current) cancelAnimationFrame(animFrameIdRef.current);
     };
-  }, [settings.dripSpeed]);
+  }, [saveHistoryState]);
 
   // Map pointer client coordinate to canvas coordinate
   const getCanvasPoint = (e: React.PointerEvent<HTMLCanvasElement>): Point => {
@@ -545,17 +616,43 @@ export const MistyCanvas: React.FC<MistyCanvasProps> = ({
     const smoothed = smoothPoints(points, currentSettings.smoothingLevel);
 
     ctx.save();
-    // In wipe mode: erase mist to reveal sharp photo
+    // In wipe or drip mode: erase mist to reveal sharp photo
     if (currentTool === 'wipe' || currentTool === 'drip') {
       ctx.globalCompositeOperation = 'destination-out';
       ctx.fillStyle = 'rgba(0,0,0,1)';
       ctx.strokeStyle = 'rgba(0,0,0,1)';
       
-      const width = currentSettings.brushSize;
+      const width = currentTool === 'drip' 
+        ? Math.max(6, currentSettings.brushSize * 0.5) 
+        : currentSettings.brushSize;
       drawSmoothStroke(ctx, smoothed, width);
 
-      // Water meniscus edge sheen
-      if (currentSettings.glassRefraction && isFinal) {
+      // In WIPE mode: ALSO erase any dewdrops, droplets, and highlights on overlayCanvas!
+      if (currentTool === 'wipe') {
+        const overlayCanvas = overlayCanvasRef.current;
+        if (overlayCanvas) {
+          const octx = overlayCanvas.getContext('2d');
+          if (octx) {
+            octx.save();
+            octx.globalCompositeOperation = 'destination-out';
+            octx.fillStyle = 'rgba(0,0,0,1)';
+            octx.strokeStyle = 'rgba(0,0,0,1)';
+            drawSmoothStroke(octx, smoothed, width);
+            octx.restore();
+          }
+        }
+
+        // Filter out any dewdrops inside the wiped path
+        if (dewdropsRef.current.length > 0) {
+          const wipeRadius = width * 0.8;
+          dewdropsRef.current = dewdropsRef.current.filter(dew => {
+            return !smoothed.some(p => Math.hypot(p.x - dew.x, p.y - dew.y) < wipeRadius);
+          });
+        }
+      }
+
+      // Water meniscus edge sheen (only on wipe)
+      if (currentTool === 'wipe' && currentSettings.glassRefraction && isFinal) {
         ctx.restore();
         ctx.save();
         ctx.globalCompositeOperation = 'source-over';
@@ -640,7 +737,22 @@ export const MistyCanvas: React.FC<MistyCanvasProps> = ({
       return;
     }
 
-    // Normal stroke start
+    // Tool: Drip Pen
+    if (currentTool === 'drip') {
+      const dripSize = Math.max(6, currentSettings.brushSize * 0.42);
+      const newDrip = createWaterDrip(
+        pt.x,
+        pt.y,
+        dripSize,
+        Math.min(dimensions.height - pt.y, 80 + Math.random() * 140)
+      );
+      activeDripsRef.current.push(newDrip);
+      soundFX.playDripSound();
+      applyStrokeToMist([pt]);
+      return;
+    }
+
+    // Tool: Wipe (Normal pure wipe start)
     applyStrokeToMist([pt]);
     soundFX.playWipeSound(0.8);
   };
@@ -662,13 +774,31 @@ export const MistyCanvas: React.FC<MistyCanvasProps> = ({
     }
 
     pts.push(pt);
-    applyStrokeToMist(pts);
 
-    // Audio feedback throttling
-    const now = Date.now();
-    if (now - lastSoundTimeRef.current > 110) {
-      soundFX.playWipeSound(1.0);
-      lastSoundTimeRef.current = now;
+    if (currentTool === 'drip') {
+      applyStrokeToMist(pts);
+      // Spawn trickling water drops along the path as user drags
+      if (pts.length % 4 === 0) {
+        const currentSettings = settingsRef.current;
+        const newDrip = createWaterDrip(
+          pt.x,
+          pt.y,
+          Math.max(5, currentSettings.brushSize * 0.36),
+          Math.min(dimensions.height - pt.y, 70 + Math.random() * 110)
+        );
+        activeDripsRef.current.push(newDrip);
+        soundFX.playDripSound();
+      }
+    } else {
+      // Pure WIPE or STEAM
+      applyStrokeToMist(pts);
+
+      // Audio feedback throttling
+      const now = Date.now();
+      if (now - lastSoundTimeRef.current > 110) {
+        soundFX.playWipeSound(1.0);
+        lastSoundTimeRef.current = now;
+      }
     }
   };
 
@@ -682,22 +812,26 @@ export const MistyCanvas: React.FC<MistyCanvasProps> = ({
     const currentSettings = settingsRef.current;
 
     if (pts.length > 0) {
-      applyStrokeToMist(pts, true);
-
-      // Trigger realistic water drip on stroke end if enabled
-      if (currentTool === 'drip' || (currentSettings.dripAutoTrickle && Math.random() < 0.45)) {
+      if (currentTool === 'wipe') {
+        // PURE WIPE: Never spawn drips!
+        applyStrokeToMist(pts, true);
+        saveHistoryState();
+      } else if (currentTool === 'drip') {
+        // DRIP TOOL: Add final drip at finish point
         const lastPt = pts[pts.length - 1];
         const newDrip = createWaterDrip(
           lastPt.x, 
           lastPt.y, 
-          currentSettings.brushSize * 0.4, 
-          Math.min(dimensions.height - lastPt.y, 60 + Math.random() * 120)
+          Math.max(6, currentSettings.brushSize * 0.4), 
+          Math.min(dimensions.height - lastPt.y, 80 + Math.random() * 130)
         );
         activeDripsRef.current.push(newDrip);
         soundFX.playDripSound();
+        saveHistoryState();
+      } else {
+        applyStrokeToMist(pts, true);
+        saveHistoryState();
       }
-
-      saveHistoryState();
     }
     currentPointsRef.current = [];
   };
@@ -705,11 +839,11 @@ export const MistyCanvas: React.FC<MistyCanvasProps> = ({
   return (
     <div 
       ref={containerRef}
-      className="relative w-full h-full flex items-center justify-center p-3 md:p-6 overflow-hidden select-none"
+      className="relative w-full h-full flex items-center justify-center p-0 m-0 overflow-hidden select-none"
     >
-      {/* Canvas Frame Container with Glass Sheen Border */}
+      {/* Canvas Frame Container filling the entire main page */}
       <div 
-        className="relative shadow-2xl rounded-2xl md:rounded-3xl overflow-hidden ring-1 ring-white/20 bg-neutral-900 mx-auto select-none"
+        className="relative overflow-hidden bg-neutral-900 mx-auto select-none w-full h-full flex items-center justify-center"
         style={{
           width: `${displaySize.width}px`,
           height: `${displaySize.height}px`,
@@ -744,8 +878,8 @@ export const MistyCanvas: React.FC<MistyCanvasProps> = ({
           <div 
             className="absolute inset-0 z-30 pointer-events-none bg-white/40 backdrop-blur-md animate-pulse transition-opacity duration-700 ease-out flex items-center justify-center"
           >
-            <div className="text-white/80 text-sm tracking-widest font-medium drop-shadow-md">
-              呼出温热的水汽...
+            <div className="text-white/90 text-sm font-mono tracking-widest font-semibold drop-shadow-md">
+              BREATHING STEAM...
             </div>
           </div>
         )}
