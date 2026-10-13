@@ -22,6 +22,7 @@ interface MistyCanvasProps {
   activeTool: ToolType;
   rainSettings?: RainSettings;
   onUndoRedoChange?: (canUndo: boolean, canRedo: boolean) => void;
+  onStartDrawing?: () => void;
   registerActions?: (actions: {
     undo: () => void;
     redo: () => void;
@@ -39,6 +40,7 @@ export const MistyCanvas: React.FC<MistyCanvasProps> = ({
   activeTool,
   rainSettings,
   onUndoRedoChange,
+  onStartDrawing,
   registerActions,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -699,6 +701,8 @@ export const MistyCanvas: React.FC<MistyCanvasProps> = ({
   const handlePointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
     e.preventDefault();
     (e.target as HTMLElement).setPointerCapture(e.pointerId);
+
+    onStartDrawing?.();
 
     const pt = getCanvasPoint(e);
     isDrawingRef.current = true;

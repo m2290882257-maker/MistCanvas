@@ -58,6 +58,12 @@ export default function App() {
   const [isBgPickerOpen, setIsBgPickerOpen] = useState(false);
   const [isReferenceOpen, setIsReferenceOpen] = useState(false);
 
+  // User drawing interaction state (only shows initial instruction prompt until user begins drawing)
+  const [hasStartedDrawing, setHasStartedDrawing] = useState(false);
+  const handleStartDrawing = useCallback(() => {
+    setHasStartedDrawing(true);
+  }, []);
+
   // Export Preview Modal
   const [exportedImageUrl, setExportedImageUrl] = useState<string | null>(null);
 
@@ -224,11 +230,18 @@ export default function App() {
           rainSettings={rainSettings}
           activeTool={activeTool}
           onUndoRedoChange={handleUndoRedoChange}
+          onStartDrawing={handleStartDrawing}
           registerActions={handleRegisterActions}
         />
 
-        {/* Ambient Subtle Instructions when starting */}
-        <div className="absolute top-14 left-1/2 -translate-x-1/2 pointer-events-none z-20 flex items-center gap-2 px-3 py-1.5 rounded-full bg-neutral-900/60 backdrop-blur-md border border-white/10 text-[11px] font-mono text-neutral-300/80 transition-opacity">
+        {/* Ambient Subtle Instructions when starting - only visible initially, fades out permanently when user begins drawing */}
+        <div
+          className={`absolute top-14 left-1/2 -translate-x-1/2 pointer-events-none z-20 flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-neutral-900/65 backdrop-blur-md border border-white/10 text-[11px] font-mono text-neutral-300/80 transition-all duration-700 ease-out select-none shadow-lg ${
+            hasStartedDrawing
+              ? 'opacity-0 -translate-y-3 scale-95 pointer-events-none'
+              : 'opacity-100 scale-100 translate-y-0'
+          }`}
+        >
           <span>
             {settings.language === 'zh'
               ? '在水雾弥漫的玻璃上滑动指尖或光标 · 平滑防抖自然顺畅'
@@ -249,8 +262,14 @@ export default function App() {
         canRedo={canRedo}
         onUndo={() => canvasActionsRef.current?.undo()}
         onRedo={() => canvasActionsRef.current?.redo()}
-        onBreatheMist={() => canvasActionsRef.current?.breatheMist()}
-        onAddDrip={() => canvasActionsRef.current?.addRandomDrip()}
+        onBreatheMist={() => {
+          handleStartDrawing();
+          canvasActionsRef.current?.breatheMist();
+        }}
+        onAddDrip={() => {
+          handleStartDrawing();
+          canvasActionsRef.current?.addRandomDrip();
+        }}
         onOpenSettings={() => setIsSettingsOpen(true)}
         onOpenBackgrounds={() => setIsBgPickerOpen(true)}
         onExport={handleExport}
