@@ -208,7 +208,33 @@ export const Toolbar: React.FC<ToolbarProps> = ({
               />
             </div>
 
-            {/* 4. Smoothing Level */}
+            {/* 4. Drip Water Trail Density (水痕密度调节) */}
+            <div>
+              <div className="flex items-center justify-between text-[11px] font-mono font-bold tracking-wider uppercase mb-1">
+                <span className="flex items-center gap-1">
+                  <span>DRIP DENSITY</span>
+                  <span className="text-[9px] px-1 py-0.2 bg-neutral-100 text-neutral-500 rounded font-normal">WATER TRAIL</span>
+                </span>
+                <span className="tabular-nums">
+                  {settings.dripDensity <= 0.25 ? 'LOW' : settings.dripDensity >= 0.75 ? 'HIGH' : 'MED'} ({Math.round((settings.dripDensity ?? 0.45) * 100)}%)
+                </span>
+              </div>
+              <input
+                type="range"
+                min="0.1"
+                max="1.0"
+                step="0.05"
+                value={settings.dripDensity ?? 0.45}
+                onChange={(e) => updateSettings({ dripDensity: Number(e.target.value) })}
+                className="w-full h-1.5 bg-neutral-200 rounded-lg appearance-none cursor-pointer accent-neutral-900"
+              />
+              <div className="flex justify-between text-[9px] font-mono text-neutral-400 mt-0.5">
+                <span>SUBTLE (10%)</span>
+                <span>DENSE (100%)</span>
+              </div>
+            </div>
+
+            {/* 5. Smoothing Level */}
             <div>
               <div className="text-[11px] font-mono font-bold tracking-wider uppercase mb-1.5">
                 SMOOTHING LEVEL

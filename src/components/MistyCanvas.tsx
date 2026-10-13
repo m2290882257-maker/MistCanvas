@@ -777,14 +777,23 @@ export const MistyCanvas: React.FC<MistyCanvasProps> = ({
 
     if (currentTool === 'drip') {
       applyStrokeToMist(pts);
-      // Spawn trickling water drops along the path as user drags
-      if (pts.length % 4 === 0) {
-        const currentSettings = settingsRef.current;
+      // Spawn trickling water drops along the path as user drags, regulated by dripDensity
+      const currentSettings = settingsRef.current;
+      const density = currentSettings.dripDensity ?? 0.45;
+      
+      // Calculate dynamic spacing step based on density (lower density = higher stride/gap)
+      // High density (1.0) -> step = 3 points
+      // Default density (0.45) -> step = 7 points
+      // Low density (0.1) -> step = 16 points
+      const stepInterval = Math.max(3, Math.round(18 - density * 15));
+      
+      // Also apply a probability check so sparse trails don't spawn uniformly
+      if (pts.length % stepInterval === 0 && Math.random() < Math.min(1, 0.35 + density * 0.65)) {
         const newDrip = createWaterDrip(
           pt.x,
           pt.y,
           Math.max(5, currentSettings.brushSize * 0.36),
-          Math.min(dimensions.height - pt.y, 70 + Math.random() * 110)
+          Math.min(dimensions.height - pt.y, (50 + Math.random() * 90) * (0.6 + density * 0.8))
         );
         activeDripsRef.current.push(newDrip);
         soundFX.playDripSound();
@@ -817,16 +826,20 @@ export const MistyCanvas: React.FC<MistyCanvasProps> = ({
         applyStrokeToMist(pts, true);
         saveHistoryState();
       } else if (currentTool === 'drip') {
-        // DRIP TOOL: Add final drip at finish point
-        const lastPt = pts[pts.length - 1];
-        const newDrip = createWaterDrip(
-          lastPt.x, 
-          lastPt.y, 
-          Math.max(6, currentSettings.brushSize * 0.4), 
-          Math.min(dimensions.height - lastPt.y, 80 + Math.random() * 130)
-        );
-        activeDripsRef.current.push(newDrip);
-        soundFX.playDripSound();
+        // DRIP TOOL: Add final drip at finish point according to density probability
+        const density = currentSettings.dripDensity ?? 0.45;
+        // At high/medium density always add finish drip; at very low density (<= 0.2) add only with chance
+        if (density > 0.2 || Math.random() < density * 3) {
+          const lastPt = pts[pts.length - 1];
+          const newDrip = createWaterDrip(
+            lastPt.x, 
+            lastPt.y, 
+            Math.max(6, currentSettings.brushSize * 0.4), 
+            Math.min(dimensions.height - lastPt.y, (60 + Math.random() * 110) * (0.6 + density * 0.8))
+          );
+          activeDripsRef.current.push(newDrip);
+          soundFX.playDripSound();
+        }
         saveHistoryState();
       } else {
         applyStrokeToMist(pts, true);

@@ -36,6 +36,7 @@ export default function App() {
     glassRefraction: true,
     dripAutoTrickle: false,
     dripSpeed: 2.5,
+    dripDensity: 0.45,
     dewdropColor: 'ruby',
     soundEnabled: false,
   });

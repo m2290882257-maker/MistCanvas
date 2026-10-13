@@ -275,6 +275,32 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 className="w-4 h-4 rounded text-sky-500 accent-sky-500 cursor-pointer"
               />
             </div>
+
+            {/* Drip Water Trail Density Slider (流向水痕密度) */}
+            <div className="p-3 rounded-xl bg-white/5 border border-white/10 space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Droplet className="w-4 h-4 text-cyan-300" />
+                  <span className="text-xs font-mono font-bold">DRIP WATER TRAIL DENSITY</span>
+                </div>
+                <span className="text-xs font-mono tabular-nums text-neutral-200">
+                  {settings.dripDensity <= 0.25 ? 'LOW' : settings.dripDensity >= 0.75 ? 'HIGH' : 'MED'} ({Math.round((settings.dripDensity ?? 0.45) * 100)}%)
+                </span>
+              </div>
+              <input
+                type="range"
+                min="0.1"
+                max="1.0"
+                step="0.05"
+                value={settings.dripDensity ?? 0.45}
+                onChange={(e) => updateSettings({ dripDensity: Number(e.target.value) })}
+                className="w-full h-2 bg-neutral-700 rounded-lg appearance-none cursor-pointer accent-cyan-400"
+              />
+              <div className="flex justify-between text-[10px] font-mono text-neutral-400">
+                <span>SUBTLE & SPARSE (10%)</span>
+                <span>DENSE & FREQUENT (100%)</span>
+              </div>
+            </div>
           </div>
 
           {/* Quick Actions at bottom */}

@@ -30,6 +30,7 @@ export interface CanvasSettings {
   glassRefraction: boolean;     // 擦拭边缘水光/折射高光
   dripAutoTrickle: boolean;    // 写字停留时是否产生下淌泪痕
   dripSpeed: number;           // 下淌速度 (1 - 5)
+  dripDensity: number;         // drip笔刷水痕流向密度 (0.1 - 1.0, 默认0.45)
   dewdropColor: DewdropColor;  // 点缀水珠颜色
   soundEnabled: boolean;       // 是否开启触感音效
 }
