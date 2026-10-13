@@ -28,6 +28,8 @@ export default function App() {
 
   // Settings
   const [settings, setSettings] = useState<CanvasSettings>({
+    language: 'en',
+    windowMode: 'none',
     brushSize: 26,
     backgroundBlur: 16,
     mistDensity: 0.76,
@@ -191,7 +193,11 @@ export default function App() {
 
         {/* Ambient Subtle Instructions when starting */}
         <div className="absolute top-14 left-1/2 -translate-x-1/2 pointer-events-none z-20 flex items-center gap-2 px-3 py-1.5 rounded-full bg-neutral-900/60 backdrop-blur-md border border-white/10 text-[11px] font-mono text-neutral-300/80 transition-opacity">
-          <span>Swipe cursor or fingertip across steamy glass · Smooth jitter dampening</span>
+          <span>
+            {settings.language === 'zh'
+              ? '在水雾弥漫的玻璃上滑动指尖或光标 · 平滑防抖自然顺畅'
+              : 'Swipe cursor or fingertip across steamy glass · Smooth jitter dampening'}
+          </span>
         </div>
       </main>
 
@@ -225,13 +231,16 @@ export default function App() {
         onBreatheMist={() => canvasActionsRef.current?.breatheMist()}
       />
 
-      {/* 5. Background Picker & Local Upload Modal */}
+      {/* 5. Background Picker & Scene Mode Modal */}
       <BackgroundPicker
         isOpen={isBgPickerOpen}
         onClose={() => setIsBgPickerOpen(false)}
         currentBgUrl={currentBgUrl}
         onSelectPreset={(url) => setCurrentBgUrl(url)}
         onCustomImageUpload={(dataUrl) => setCurrentBgUrl(dataUrl)}
+        windowMode={settings.windowMode}
+        onSelectWindowMode={(mode) => handleUpdateSettings({ windowMode: mode })}
+        language={settings.language}
       />
 
       {/* 6. Reference Art Inspiration Modal */}

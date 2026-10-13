@@ -10,6 +10,7 @@ import {
 import { smoothPoints, drawSmoothStroke } from '../utils/smoothing';
 import { createWaterDrip, updateWaterDrips, drawDripTrailOnMask, drawDripHighlights, drawDewdropDot, drawDoodleStamp } from '../utils/drips';
 import { soundFX } from '../utils/audio';
+import { WindowFrameOverlay, drawWindowFrameOnCanvas } from './WindowFrameOverlay';
 
 interface MistyCanvasProps {
   backgroundImageUrl: string;
@@ -513,8 +514,13 @@ export const MistyCanvas: React.FC<MistyCanvasProps> = ({
     // 3. Draw water highlights & dewdrops
     expCtx.drawImage(overlay, 0, 0);
 
+    // 4. Draw realistic window scene frame if mode is active
+    if (settings.windowMode && settings.windowMode !== 'none') {
+      drawWindowFrameOnCanvas(expCtx, dimensions.width, dimensions.height, settings.windowMode);
+    }
+
     return exportCanvas.toDataURL('image/png', 0.95);
-  }, [dimensions]);
+  }, [dimensions, settings.windowMode]);
 
   // Register parent actions
   useEffect(() => {
@@ -885,6 +891,9 @@ export const MistyCanvas: React.FC<MistyCanvasProps> = ({
           ref={overlayCanvasRef}
           className="absolute inset-0 w-full h-full block pointer-events-none z-20"
         />
+
+        {/* Layer 4: Immersive Window Frame Overlay (Car, Train, Home scene modes) */}
+        <WindowFrameOverlay mode={settings.windowMode || 'none'} />
 
         {/* Breathing fog steam animation overlay */}
         {isBreathing && (

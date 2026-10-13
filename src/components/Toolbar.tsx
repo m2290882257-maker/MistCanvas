@@ -72,15 +72,17 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   }, []);
 
   // Sub-items for PAINT menu according to user request:
+  const isZh = settings.language === 'zh';
+
   // WIPE, DRIP, DEWDROP, WINGS, SPARKLE, HEART, STEAM
   const paintSubItems: { id: ToolType; num: string; label: string; desc: string }[] = [
-    { id: 'wipe', num: '01', label: 'WIPE', desc: 'Fingertip Mist Removal' },
-    { id: 'drip', num: '02', label: 'DRIP', desc: 'Trickle Water Trail' },
-    { id: 'dewdrop', num: '03', label: 'DEWDROP', desc: 'Crystal Droplet Stamp' },
-    { id: 'wing', num: '04', label: 'WINGS', desc: 'Angel Wing Doodle' },
-    { id: 'sparkle', num: '05', label: 'SPARKLE', desc: 'Starry Shine Doodle' },
-    { id: 'heart', num: '06', label: 'HEART', desc: 'Warm Heart Stamp' },
-    { id: 'steam', num: '07', label: 'STEAM', desc: 'Re-condense Mist Pen' },
+    { id: 'wipe', num: '01', label: 'WIPE', desc: isZh ? '水雾擦除' : 'Fingertip Mist Removal' },
+    { id: 'drip', num: '02', label: 'DRIP', desc: isZh ? '水痕流淌' : 'Trickle Water Trail' },
+    { id: 'dewdrop', num: '03', label: 'DEWDROP', desc: isZh ? '露珠点缀' : 'Crystal Droplet Stamp' },
+    { id: 'wing', num: '04', label: 'WINGS', desc: isZh ? '羽翼涂鸦' : 'Angel Wing Doodle' },
+    { id: 'sparkle', num: '05', label: 'SPARKLE', desc: isZh ? '四角星光' : 'Starry Shine Doodle' },
+    { id: 'heart', num: '06', label: 'HEART', desc: isZh ? '暖心印记' : 'Warm Heart Stamp' },
+    { id: 'steam', num: '07', label: 'STEAM', desc: isZh ? '局部补雾' : 'Re-condense Mist Pen' },
   ];
 
   return (
@@ -162,7 +164,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
             {/* 1. Brush Width */}
             <div>
               <div className="flex items-center justify-between text-[11px] font-mono font-bold tracking-wider uppercase mb-1">
-                <span>STROKE WIDTH</span>
+                <span>{isZh ? 'STROKE WIDTH · 笔触粗细' : 'STROKE WIDTH'}</span>
                 <span>{settings.brushSize}PX</span>
               </div>
               <input
@@ -178,7 +180,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
             {/* 2. Background Blur Degree */}
             <div>
               <div className="flex items-center justify-between text-[11px] font-mono font-bold tracking-wider uppercase mb-1">
-                <span>BACKGROUND BLUR</span>
+                <span>{isZh ? 'BACKGROUND BLUR · 虚化' : 'BACKGROUND BLUR'}</span>
                 <span>{settings.backgroundBlur}PX</span>
               </div>
               <input
@@ -194,7 +196,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
             {/* 3. Mist Density */}
             <div>
               <div className="flex items-center justify-between text-[11px] font-mono font-bold tracking-wider uppercase mb-1">
-                <span>MIST DENSITY</span>
+                <span>{isZh ? 'MIST DENSITY · 水雾浓度' : 'MIST DENSITY'}</span>
                 <span>{Math.round(settings.mistDensity * 100)}%</span>
               </div>
               <input
@@ -212,11 +214,15 @@ export const Toolbar: React.FC<ToolbarProps> = ({
             <div>
               <div className="flex items-center justify-between text-[11px] font-mono font-bold tracking-wider uppercase mb-1">
                 <span className="flex items-center gap-1">
-                  <span>DRIP DENSITY</span>
-                  <span className="text-[9px] px-1 py-0.2 bg-neutral-100 text-neutral-500 rounded font-normal">WATER TRAIL</span>
+                  <span>{isZh ? 'DRIP DENSITY' : 'DRIP DENSITY'}</span>
+                  <span className="text-[9px] px-1 py-0.2 bg-neutral-100 text-neutral-500 rounded font-normal">
+                    {isZh ? '水痕密度' : 'WATER TRAIL'}
+                  </span>
                 </span>
                 <span className="tabular-nums">
-                  {settings.dripDensity <= 0.25 ? 'LOW' : settings.dripDensity >= 0.75 ? 'HIGH' : 'MED'} ({Math.round((settings.dripDensity ?? 0.45) * 100)}%)
+                  {isZh 
+                    ? (settings.dripDensity <= 0.25 ? '低' : settings.dripDensity >= 0.75 ? '高' : '中')
+                    : (settings.dripDensity <= 0.25 ? 'LOW' : settings.dripDensity >= 0.75 ? 'HIGH' : 'MED')} ({Math.round((settings.dripDensity ?? 0.45) * 100)}%)
                 </span>
               </div>
               <input
@@ -229,15 +235,15 @@ export const Toolbar: React.FC<ToolbarProps> = ({
                 className="w-full h-1.5 bg-neutral-200 rounded-lg appearance-none cursor-pointer accent-neutral-900"
               />
               <div className="flex justify-between text-[9px] font-mono text-neutral-400 mt-0.5">
-                <span>SUBTLE (10%)</span>
-                <span>DENSE (100%)</span>
+                <span>{isZh ? '稀疏 (10%)' : 'SUBTLE (10%)'}</span>
+                <span>{isZh ? '密集 (100%)' : 'DENSE (100%)'}</span>
               </div>
             </div>
 
             {/* 5. Smoothing Level */}
             <div>
               <div className="text-[11px] font-mono font-bold tracking-wider uppercase mb-1.5">
-                SMOOTHING LEVEL
+                {isZh ? 'SMOOTHING · 防抖平滑' : 'SMOOTHING LEVEL'}
               </div>
               <div className="grid grid-cols-3 gap-1">
                 {(['light', 'natural', 'high'] as SmoothingLevel[]).map((lvl) => (
@@ -250,7 +256,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
                         : 'bg-neutral-100 text-neutral-600 border-neutral-200 hover:text-neutral-900'
                     }`}
                   >
-                    {lvl}
+                    {isZh ? (lvl === 'light' ? '轻微' : lvl === 'natural' ? '自然' : '强力') : lvl}
                   </button>
                 ))}
               </div>
@@ -350,16 +356,16 @@ export const Toolbar: React.FC<ToolbarProps> = ({
             <button
               onClick={onBreatheMist}
               className="py-1 px-2 rounded-full font-mono font-bold tracking-[0.16em] uppercase text-xs sm:text-[13px] text-neutral-800 hover:text-neutral-950 active:scale-95 transition-all select-none whitespace-nowrap"
-              title="Exhale warm mist to re-fog the glass"
+              title={isZh ? '哈气起雾 · 重新在玻璃表面凝聚水雾' : 'Exhale warm mist to re-fog the glass'}
             >
               BREATHE
             </button>
 
-            {/* 4. BACKGROUND (更换背景 - Change preset or upload image) */}
+            {/* 4. BACKGROUND (更换背景与模式 - Change preset, scene mode or upload image) */}
             <button
               onClick={onOpenBackgrounds}
               className="py-1 px-2 rounded-full font-mono font-bold tracking-[0.16em] uppercase text-xs sm:text-[13px] text-neutral-800 hover:text-neutral-950 active:scale-95 transition-all select-none whitespace-nowrap"
-              title="Change background photo or upload custom image"
+              title={isZh ? '模式与背景 · 切换车窗/高铁/居室情境画框与壁纸' : 'Mode & Background · Switch car, train, home window frames & wallpapers'}
             >
               BACKGROUND
             </button>
@@ -368,7 +374,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
             <button
               onClick={onExport}
               className="py-1 px-2 rounded-full font-mono font-bold tracking-[0.16em] uppercase text-xs sm:text-[13px] text-neutral-800 hover:text-neutral-950 active:scale-95 transition-all select-none whitespace-nowrap"
-              title="Export high-resolution artwork"
+              title={isZh ? '保存下载高清玻璃艺术画' : 'Export high-resolution artwork'}
             >
               DOWNLOAD
             </button>
@@ -385,7 +391,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
               className={`p-1 rounded-full transition-colors ${
                 canUndo ? 'text-neutral-800 hover:text-neutral-950' : 'text-neutral-300 cursor-not-allowed'
               }`}
-              title="Undo (Ctrl+Z)"
+              title={isZh ? '撤销 (Ctrl+Z)' : 'Undo (Ctrl+Z)'}
             >
               <RotateCcw className="w-3.5 h-3.5" />
             </button>
@@ -396,7 +402,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
               className={`p-1 rounded-full transition-colors ${
                 canRedo ? 'text-neutral-800 hover:text-neutral-950' : 'text-neutral-300 cursor-not-allowed'
               }`}
-              title="Redo (Ctrl+Y)"
+              title={isZh ? '重做 (Ctrl+Y)' : 'Redo (Ctrl+Y)'}
             >
               <RotateCw className="w-3.5 h-3.5" />
             </button>
@@ -404,7 +410,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
             <button
               onClick={onOpenSettings}
               className="p-1 rounded-full text-neutral-700 hover:text-neutral-950 transition-colors ml-1"
-              title="Aspect ratio & canvas settings"
+              title={isZh ? '画布比例、语言切换与系统设置' : 'Aspect ratio, language & canvas settings'}
             >
               <Sliders className="w-3.5 h-3.5" />
             </button>

@@ -21,7 +21,13 @@ export interface BackgroundPreset {
   description: string;
 }
 
+export type Language = 'en' | 'zh';
+
+export type WindowMode = 'none' | 'car' | 'train' | 'home';
+
 export interface CanvasSettings {
+  language: Language;          // 界面语言 ('en' | 'zh', 默认 'en')
+  windowMode: WindowMode;      // 场景窗框情境模式 ('none' | 'car' | 'train' | 'home')
   brushSize: number;           // 笔触粗细 (8px - 80px)
   backgroundBlur: number;      // 背景虚化程度 (0px - 35px)
   mistDensity: number;         // 水雾浓度 (0.3 - 0.95)
