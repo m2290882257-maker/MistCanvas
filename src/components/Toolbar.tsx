@@ -515,13 +515,13 @@ export const Toolbar: React.FC<ToolbarProps> = ({
                 <div className="pt-2 border-t border-neutral-200/80 flex justify-end">
                   <button
                     onClick={() => updateRainSettings({
-                      rainRate: 1.0,
-                      rainDensity: 0.65,
-                      dropSize: 1.0,
-                      trailDensity: 0.75,
-                      slideSpeed: 1.0,
-                      trailLength: 1.0,
-                      refraction: 1.0,
+                      rainRate: DEFAULT_RAIN_SETTINGS.rainRate,
+                      rainDensity: DEFAULT_RAIN_SETTINGS.rainDensity,
+                      dropSize: DEFAULT_RAIN_SETTINGS.dropSize,
+                      trailDensity: DEFAULT_RAIN_SETTINGS.trailDensity,
+                      slideSpeed: DEFAULT_RAIN_SETTINGS.slideSpeed,
+                      trailLength: DEFAULT_RAIN_SETTINGS.trailLength,
+                      refraction: DEFAULT_RAIN_SETTINGS.refraction,
                     })}
                     className="text-[10px] font-mono text-neutral-500 hover:text-neutral-900 transition-colors underline"
                   >

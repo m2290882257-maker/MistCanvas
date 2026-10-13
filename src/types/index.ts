@@ -84,11 +84,11 @@ export interface RainSettings {
 
 export const DEFAULT_RAIN_SETTINGS: RainSettings = {
   enabled: false,
-  rainRate: 1.0,
-  rainDensity: 0.65,
-  dropSize: 1.0,
-  trailDensity: 0.75,
-  slideSpeed: 1.0,
-  trailLength: 1.0,
-  refraction: 1.0,
+  rainRate: 0.35,
+  rainDensity: 0.25,
+  dropSize: 1.55,
+  trailDensity: 0.55,
+  slideSpeed: 0.55,
+  trailLength: 0.70,
+  refraction: 0.00,
 };

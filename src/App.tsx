@@ -23,8 +23,10 @@ export default function App() {
   // Screen ratio state: default 'auto' to expand canvas to the entire main page
   const [aspectRatio, setAspectRatio] = useState<AspectRatioType>('auto');
 
-  // Background image state (default to romantic rose bouquet matching reference photo)
-  const [currentBgUrl, setCurrentBgUrl] = useState<string>(BACKGROUND_PRESETS[0].url);
+  // Background image state (default to Rainy Tokyo Neon Lights per user settings)
+  const [currentBgUrl, setCurrentBgUrl] = useState<string>(
+    BACKGROUND_PRESETS.find((p) => p.id === 'rainy-city')?.url || BACKGROUND_PRESETS[1].url
+  );
 
   // Active tool: 'wipe' by default
   const [activeTool, setActiveTool] = useState<ToolType>('wipe');
